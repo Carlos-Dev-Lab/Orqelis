@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+*.db
+*.db-journal
+/src/generated/
+
+# Lockfiles (if using pnpm at root)
+package-lock.json
+yarn.lock

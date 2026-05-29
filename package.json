@@ -1,0 +1,25 @@
+{
+  "name": "orqelis-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Orqelis Monorepo",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "pnpm --filter api dev",
+    "build": "pnpm build:shared && pnpm build:api && pnpm build:web",
+    "build:shared": "pnpm --filter @orqelis/shared build",
+    "build:api": "pnpm --filter api build",
+    "build:web": "pnpm --filter web build",
+    "typecheck": "pnpm typecheck:shared && pnpm typecheck:api && pnpm typecheck:web",
+    "typecheck:shared": "pnpm --filter @orqelis/shared typecheck",
+    "typecheck:api": "pnpm --filter api typecheck",
+    "typecheck:web": "pnpm --filter web typecheck",
+    "prisma:generate": "pnpm --filter api prisma:generate",
+    "prisma:migrate": "pnpm --filter api prisma:migrate",
+    "gen:secrets": "node scripts/generate-secrets.js"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.3"
+  }
+}
