@@ -63,7 +63,7 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
   const [isSnippetModalOpen, setIsSnippetModalOpen] = useState(false);
   
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const lastNoteIdRef = useRef<string | null>(null);
+  const lastNoteIdRef = useRef<string | null | undefined>(undefined);
 
   const activeNote = useMemo(() => 
     notes.find(n => n.id === noteId),
@@ -95,7 +95,7 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
         setHasUnsavedChanges(false);
       }
     } else {
-      lastNoteIdRef.current = null;
+      lastNoteIdRef.current = undefined;
     }
   }, [isOpen, noteId, activeNote, localTitle, localContent]);
 

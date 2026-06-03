@@ -67,7 +67,7 @@ export function SnippetModal({ isOpen, onClose, snippetId }: SnippetModalProps) 
   const [copied, setCopied] = useState(false);
   
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const lastSnippetIdRef = useRef<string | null>(null);
+  const lastSnippetIdRef = useRef<string | null | undefined>(undefined);
 
   const activeSnippet = useMemo(() => 
     snippets.find(s => s.id === snippetId),
@@ -102,7 +102,7 @@ export function SnippetModal({ isOpen, onClose, snippetId }: SnippetModalProps) 
         setHasUnsavedChanges(false);
       }
     } else {
-      lastSnippetIdRef.current = null;
+      lastSnippetIdRef.current = undefined;
     }
   }, [isOpen, snippetId, activeSnippet, localTitle, localCode]);
 
