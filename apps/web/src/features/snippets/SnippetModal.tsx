@@ -43,6 +43,7 @@ export function SnippetModal({ isOpen, onClose, snippetId }: SnippetModalProps) 
     updateSnippet,
     createSnippet,
     deleteSnippet,
+    setActiveSnippetId,
     theme,
     language,
     incrementSnippetUsage,
@@ -66,6 +67,7 @@ export function SnippetModal({ isOpen, onClose, snippetId }: SnippetModalProps) 
   const [copied, setCopied] = useState(false);
   
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const lastSnippetIdRef = useRef<string | null>(null);
 
   const activeSnippet = useMemo(() => 
     snippets.find(s => s.id === snippetId),
@@ -75,57 +77,71 @@ export function SnippetModal({ isOpen, onClose, snippetId }: SnippetModalProps) 
   // Initialize local state
   useEffect(() => {
     if (isOpen) {
-      if (activeSnippet) {
-        setLocalCode(activeSnippet.code);
-        setLocalTitle(activeSnippet.title);
-        setLocalLanguage(activeSnippet.language);
-        setLocalDescription(activeSnippet.description || '');
-        setLocalTags(activeSnippet.tags || []);
-        setLocalNoteIds(activeSnippet.noteIds || []);
-        setLocalGroupId(activeSnippet.groupId || null);
+      if (snippetId !== lastSnippetIdRef.current || (activeSnippet && !localTitle && !localCode)) {
+        if (activeSnippet) {
+          setLocalCode(activeSnippet.code);
+          setLocalTitle(activeSnippet.title);
+          setLocalLanguage(activeSnippet.language);
+          setLocalDescription(activeSnippet.description || '');
+          setLocalTags(activeSnippet.tags || []);
+          setLocalNoteIds(activeSnippet.noteIds || []);
+          setLocalGroupId(activeSnippet.groupId || null);
+          setIsPreview(true);
+          lastSnippetIdRef.current = snippetId;
+        } else if (!snippetId) {
+          setLocalCode('');
+          setLocalTitle('');
+          setLocalLanguage('typescript');
+          setLocalDescription('');
+          setLocalTags([]);
+          setLocalNoteIds([]);
+          setLocalGroupId(useAppStore.getState().activeGroupId ?? null);
+          setIsPreview(false);
+          lastSnippetIdRef.current = null;
+        }
         setHasUnsavedChanges(false);
-        setIsPreview(true);
-      } else {
-        setLocalCode('');
-        setLocalTitle('');
-        setLocalLanguage('typescript');
-        setLocalDescription('');
-        setLocalTags([]);
-        setLocalNoteIds([]);
-        setLocalGroupId(useAppStore.getState().activeGroupId ?? null);
-        setHasUnsavedChanges(false);
-        setIsPreview(false);
       }
+    } else {
+      lastSnippetIdRef.current = null;
     }
-  }, [isOpen, activeSnippet]);
+  }, [isOpen, snippetId, activeSnippet, localTitle, localCode]);
 
   const saveSnippet = useCallback(async () => {
     if (!localTitle.trim() || !localCode.trim()) return;
 
-    if (snippetId && activeSnippet) {
-      await updateSnippet(snippetId, {
-        title: localTitle,
-        code: localCode,
-        language: localLanguage,
-        description: localDescription,
-        tags: localTags,
-        noteIds: localNoteIds,
-        groupId: localGroupId,
-      });
-    } else if (isOpen) {
-      await createSnippet({
-        title: localTitle,
-        code: localCode,
-        language: localLanguage,
-        description: localDescription,
-        tags: localTags,
-        noteIds: localNoteIds,
-        groupId: localGroupId,
-      });
-      // Logic to set active snippet if needed
-    }
     setHasUnsavedChanges(false);
-  }, [snippetId, activeSnippet, localTitle, localCode, localLanguage, localDescription, localTags, localNoteIds, localGroupId, updateSnippet, createSnippet, isOpen]);
+
+    try {
+      if (snippetId && activeSnippet) {
+        await updateSnippet(snippetId, {
+          title: localTitle,
+          code: localCode,
+          language: localLanguage,
+          description: localDescription,
+          tags: localTags,
+          noteIds: localNoteIds,
+          groupId: localGroupId,
+        });
+      } else if (isOpen) {
+        const newSnippet = await createSnippet({
+          title: localTitle,
+          code: localCode,
+          language: localLanguage,
+          description: localDescription,
+          tags: localTags,
+          noteIds: localNoteIds,
+          groupId: localGroupId,
+        });
+        if (newSnippet?.id) {
+          setActiveSnippetId(newSnippet.id);
+          lastSnippetIdRef.current = newSnippet.id;
+        }
+      }
+    } catch (error) {
+      console.error('Error saving snippet:', error);
+      setHasUnsavedChanges(true);
+    }
+  }, [snippetId, activeSnippet, localTitle, localCode, localLanguage, localDescription, localTags, localNoteIds, localGroupId, updateSnippet, createSnippet, setActiveSnippetId, isOpen]);
 
   // Auto-save
   useEffect(() => {

@@ -63,6 +63,7 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
   const [isSnippetModalOpen, setIsSnippetModalOpen] = useState(false);
   
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const lastNoteIdRef = useRef<string | null>(null);
 
   const activeNote = useMemo(() => 
     notes.find(n => n.id === noteId),
@@ -72,55 +73,69 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
   // Initialize local state when note changes or modal opens
   useEffect(() => {
     if (isOpen) {
-      // Al abrir el modal desde las vistas, iniciar en modo visualización
-      setIsPreview(true);
-      if (activeNote) {
-        setLocalContent(activeNote.content);
-        setLocalTitle(activeNote.title);
-        setLocalCategory(activeNote.category);
-        setLocalTags(activeNote.tags);
-        setLocalSnippetIds(activeNote.snippetIds || []);
-        setHasUnsavedChanges(false);
-      } else {
-        setLocalContent('');
-        setLocalTitle('');
-        setLocalCategory('docs');
-        setLocalTags([]);
-        setLocalSnippetIds([]);
+      // Si el noteId cambia o es una nota diferente a la última cargada
+      if (noteId !== lastNoteIdRef.current || (activeNote && !localTitle && !localContent)) {
+        if (activeNote) {
+          setLocalContent(activeNote.content);
+          setLocalTitle(activeNote.title);
+          setLocalCategory(activeNote.category);
+          setLocalTags(activeNote.tags);
+          setLocalSnippetIds(activeNote.snippetIds || []);
+          setIsPreview(true);
+          lastNoteIdRef.current = noteId;
+        } else if (!noteId) {
+          setLocalContent('');
+          setLocalTitle('');
+          setLocalCategory('docs');
+          setLocalTags([]);
+          setLocalSnippetIds([]);
+          setIsPreview(false);
+          lastNoteIdRef.current = null;
+        }
         setHasUnsavedChanges(false);
       }
+    } else {
+      lastNoteIdRef.current = null;
     }
-  }, [isOpen, activeNote]);
+  }, [isOpen, noteId, activeNote, localTitle, localContent]);
 
   // Auto-save with debounce
   const saveNote = useCallback(async () => {
     if (!localTitle.trim() && !localContent.trim()) return;
 
+    // Resetear el flag antes del guardado para capturar cambios que ocurran durante el proceso
+    setHasUnsavedChanges(false);
+
     const links = extractBidirectionalLinks(localContent);
 
-    if (noteId && activeNote) {
-      await updateNote(noteId, {
-        title: localTitle || 'Untitled',
-        content: localContent,
-        category: localCategory,
-        tags: localTags,
-        links,
-        snippetIds: localSnippetIds,
-      });
-    } else if (isOpen) {
-      const newNote = await createNote({
-        title: localTitle || 'Untitled',
-        content: localContent,
-        category: localCategory,
-        tags: localTags,
-        links,
-        snippetIds: localSnippetIds,
-        groupId: useAppStore.getState().activeGroupId ?? null,
-      });
-      setActiveNoteId(newNote.id);
+    try {
+      if (noteId && activeNote) {
+        await updateNote(noteId, {
+          title: localTitle || 'Untitled',
+          content: localContent,
+          category: localCategory,
+          tags: localTags,
+          links,
+          snippetIds: localSnippetIds,
+        });
+      } else if (isOpen) {
+        const newNote = await createNote({
+          title: localTitle || 'Untitled',
+          content: localContent,
+          category: localCategory,
+          tags: localTags,
+          links,
+          snippetIds: localSnippetIds,
+          groupId: useAppStore.getState().activeGroupId ?? null,
+        });
+        setActiveNoteId(newNote.id);
+        lastNoteIdRef.current = newNote.id;
+      }
+    } catch (error) {
+      console.error('Error saving note:', error);
+      setHasUnsavedChanges(true);
     }
-    setHasUnsavedChanges(false);
-  }, [noteId, activeNote, localTitle, localContent, localCategory, localTags, updateNote, createNote, setActiveNoteId, isOpen]);
+  }, [noteId, activeNote, localTitle, localContent, localCategory, localTags, localSnippetIds, updateNote, createNote, setActiveNoteId, isOpen]);
 
   // Auto-save on changes
   useEffect(() => {
