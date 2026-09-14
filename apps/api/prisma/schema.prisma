@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String?
+  name          String?
+  image         String?
+  role          String    @default("user")
+  isActive      Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+  provider      String    @default("local")
+  googleId      String?   @unique
+  lastLoginAt   DateTime?
+  lastLoginIp   String?
+  deletedAt     DateTime?
+  storageQuotaBytes BigInt @default(104857600)
+  usedStorageBytes BigInt @default(0)
+  syncEnabled   Boolean   @default(false)
+  tokenVersion  Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  workspaces    Workspace[]
+  sessions      Session[]
+  auditLogs     AuditLog[]
+  activities    Activity[]
+  notifications Notification[]
+}
+
+model Workspace {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  color       String
+  icon        String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isActive    Boolean  @default(true)
+  deletedAt   DateTime?
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  notes       Note[]
+  snippets    Snippet[]
+  connections Connection[]
+  groups      Group[]
+  notifications Notification[]
+}
+
+model Group {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  color       String
+  icon        String
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+  notes       Note[]
+  snippets    Snippet[]
+}
+
+model Note {
+  id           String   @id @default(uuid())
+  title        String
+  content      String
+  category     String
+  tags         String   @default("[]") // JSON string for SQLite compatibility
+  technologies String   @default("[]") // JSON string for SQLite compatibility
+  links        String   @default("[]") // JSON string for SQLite compatibility
+  snippetIds   String   @default("[]") // Related snippets (JSON array)
+  isFavorite   Boolean  @default(false)
+  isArchived   Boolean  @default(false)
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id])
+  groupId      String?
+  group        Group?    @relation(fields: [groupId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+}
+
+model Snippet {
+  id          String   @id @default(uuid())
+  title       String
+  code        String
+  language    String
+  framework   String?
+  description String?
+  tags        String   @default("[]") // JSON string
+  noteIds     String   @default("[]") // Related notes (JSON array)
+  isFavorite  Boolean  @default(false)
+  usageCount  Int      @default(0)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  groupId     String?
+  group       Group?    @relation(fields: [groupId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+}
+
+model Session {
+  id                 String    @id @default(uuid())
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash   String    @unique
+  tokenFamily        String
+  userAgent          String?
+  ipAddress          String?
+  expiresAt          DateTime
+  revokedAt          DateTime?
+  replacedByTokenId  String?
+  createdAt          DateTime  @default(now())
+  lastUsedAt         DateTime?
+
+  @@index([userId])
+  @@index([tokenFamily])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  actorUserId  String?
+  user         User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorEmail   String?
+  action       String
+  entityType   String?
+  entityId     String?
+  status       String   @default("success")
+  severity     String   @default("info")
+  ipAddress    String?
+  userAgent    String?
+  metadata     String   @default("{}")
+  createdAt    DateTime @default(now())
+
+  @@index([actorUserId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([entityType, entityId])
+}
+
+model Activity {
+  id          String   @id @default(uuid())
+  type        String
+  entityType  String
+  entityId    String
+  entityTitle String
+  timestamp   DateTime @default(now())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([timestamp])
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  title       String
+  message     String
+  type        String
+  read        Boolean  @default(false)
+  timestamp   DateTime @default(now())
+  link        String?
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Connection {
+  id          String   @id @default(uuid())
+  name        String
+  type        String   @default("ssh") // "ssh", "web" or "database"
+  host        String
+  port        Int?     @default(22)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  credentials Credential[]
+  noteIds     String   @default("[]") // Related notes (JSON array)
+  snippetIds  String   @default("[]") // Related snippets (JSON array)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+}
+
+model Credential {
+  id                String   @id @default(uuid())
+  username          String
+  encryptedPassword String
+  passwordIv        String
+  passwordAuthTag   String
+  keyVersion        Int      @default(1)
+  connectionId      String
+  connection        Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
