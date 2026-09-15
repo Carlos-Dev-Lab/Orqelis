@@ -18,6 +18,26 @@ export const translations = {
     collapse: 'Collapse',
     expand: 'Expand',
     newNote: 'New Note',
+    newDiagram: 'New Diagram',
+    markdownNote: 'Markdown note',
+    diagram: 'Diagram',
+    untitledDiagram: 'Untitled diagram',
+    linkedNotes: 'Linked notes',
+    outgoingLinks: 'Outgoing links',
+    backlinks: 'Backlinks',
+    noLinksYet: 'No links yet',
+    insertLink: 'Insert link',
+    searchNotesToLink: 'Search notes to link...',
+    diagramLinkHint: 'Write [[Note title]] in a text or as an element link to connect notes.',
+    diagramNotFound: 'Diagram not found',
+    diagramLoadError: 'Could not render the diagram',
+    imageUploadError: 'Could not upload an image of the diagram',
+    elements: 'elements',
+    linkedDiagrams: 'Linked diagrams',
+    openDiagram: 'Open diagram',
+    diagramWelcomeHeading: 'Sketch architectures, flows and ideas. Write [[Note title]] to connect them with your notes.',
+    diagramToolbarHint: 'Pick a tool',
+    diagramMenuHint: 'Export & linked notes',
     search: 'Search...',
     manageWorkspaces: 'Manage Workspaces',
     newWorkspace: 'New',
@@ -26,6 +46,19 @@ export const translations = {
     generalSettings: 'General Settings',
     appearance: 'Appearance',
     keyboardShortcuts: 'Keyboard Shortcuts',
+    shortcutGroupGeneral: 'General',
+    shortcutGroupEditor: 'Editor & console',
+    shortcutCommandPalette: 'Open command palette',
+    shortcutNewNote: 'Create new note',
+    shortcutNewDiagram: 'Create new diagram',
+    shortcutToggleSidebar: 'Toggle sidebar',
+    shortcutSwitchWorkspace: 'Switch to workspace 1–9',
+    shortcutCloseModals: 'Close modals and palettes',
+    shortcutSaveNote: 'Save current note or diagram',
+    shortcutTogglePreview: 'Toggle note preview',
+    shortcutConsoleAutocomplete: 'Autocomplete (console)',
+    shortcutConsoleHistory: 'Navigate command history (console)',
+    shortcutDiagramNote: 'Inside a diagram canvas, Ctrl+K (element link), Ctrl+B and Esc belong to the drawing editor. Press ? on the canvas to see all its drawing shortcuts. Ctrl+Alt shortcuts work with any keyboard layout; the AltGr key keeps typing symbols such as @ or #.',
     workspaceSettings: 'Workspace Settings',
     workspaceName: 'Workspace Name',
     description: 'Description',
@@ -80,7 +113,7 @@ export const translations = {
     quickSearch: 'Quick search',
     authSystemFound: '[[Auth System]] found',
     smartNotes: 'Smart Technical Notes',
-    smartNotesDesc: 'Write documentation with code snippets, diagrams, and bidirectional links.',
+    smartNotesDesc: 'Write documentation with code snippets, hand-drawn diagrams, and bidirectional links.',
     knowledgeGraphDesc: 'Visualize connections between notes, modules, and architecture.',
     devConsoleDesc: 'Execute commands, navigate notes, and manage your knowledge base.',
     snippetLibrary: 'Snippet Library',
@@ -120,6 +153,7 @@ export const translations = {
     goConsole: 'Go to Dev Console',
     goSettings: 'Go to Settings',
     createNewNote: 'Create New Note',
+    createNewDiagram: 'Create New Diagram',
     searchPlaceholder: 'Search notes, snippets, or commands...',
     noResults: 'No results found for',
     navigate: 'Navigate',
@@ -152,6 +186,15 @@ export const translations = {
     noteNotFound: 'Note not found',
     openedNote: 'Opened note',
     createdNewNote: 'Created new note',
+    diagramOperations: 'Diagram Operations',
+    foundDiagrams: 'Found diagrams',
+    noDiagramsFound: 'No diagrams found',
+    createFirstDiagramWith: 'Create your first diagram with',
+    createdNewDiagram: 'Created new diagram',
+    openedDiagram: 'Opened diagram',
+    workspaceRequiredForDiagram: 'Create a workspace before adding diagrams.',
+    embedCopied: 'Copied to clipboard — paste it in a note to embed the diagram',
+    embedCopyManually: 'Copy this into a note to embed the diagram',
     deletedNote: 'Deleted note',
     toggledFavorite: 'Toggled favorite for',
     knowledgeBaseStats: 'KNOWLEDGE BASE STATS',
@@ -188,6 +231,7 @@ export const translations = {
     tutorialTitle: 'SYSTEM GUIDE & TUTORIAL',
     tutorialIndex: `Welcome to Orqelis. Choose a topic to learn more:
 - 'tutorial notes'     : Create and manage technical notes
+- 'tutorial diagrams'  : Draw diagrams and connect them to notes
 - 'tutorial snippets'  : Save and link code fragments
 - 'tutorial graph'     : Connect ideas with bidirectional links
 - 'tutorial console'   : Master the command line interface
@@ -199,6 +243,7 @@ Type 'help' to see the full list of available commands.`,
 1. CREATION:
    - Command: 'new <title>' to create instantly from console.
    - Button: Use 'New Note' in the sidebar.
+   - Shortcut: Ctrl+Alt+N (Ctrl+Alt+D creates a diagram).
 
 2. WRITING & STYLING:
    - Use 'tutorial styles' to see all Markdown options.
@@ -209,6 +254,8 @@ Type 'help' to see the full list of available commands.`,
      links are case-insensitive and create clickable shortcuts.
    - **Code Snippets**: Link reusable blocks via 'Link Snippet'.
    - **Visualizing**: Every link creates an edge in the Graph.
+   - **Diagrams**: [[Diagram]] shows a preview on hover
+     and in 'Linked diagrams'; ![[Diagram]] embeds it.
 
 4. ORGANIZATION:
    - **Groups**: Cluster related notes (e.g. 'Frontend', 'Database').
@@ -226,6 +273,37 @@ Type 'help' to see the full list of available commands.`,
 
 6. DELETION:
    - 'delete <title>' or use the trash icon in the editor.`,
+    tutorialDiagrams: `HAND-DRAWN DIAGRAMS (EXCALIDRAW)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. CREATION:
+   - Shortcut: Ctrl+Alt+D, from anywhere in the app.
+   - Button: pencil icon next to 'New Note'.
+   - Command: 'new-diagram <title>'.
+   Diagrams are notes: category, group, tags and favorites
+   work the same way. Changes are saved automatically.
+
+2. CONNECTING NOTES:
+   - Write [[Note title]] inside any text of the canvas.
+   - Or set [[Note title]] as an element link (Ctrl+K).
+   - The link icon in the header lists outgoing links and
+     backlinks, and lets you insert a link on the canvas.
+
+3. USING DIAGRAMS IN NOTES:
+   - [[Diagram title]]: link with a preview on hover and a
+     card under 'Linked diagrams' at the end of the note.
+   - ![[Diagram title]]: embeds the diagram in the note.
+     In the editor, type '/embed' to insert it.
+
+4. IMAGES & EXPORT:
+   - Paste or drop images: they are stored on the server
+     (not inside the database) and follow the diagram.
+   - Menu (top-left): export, save as image, canvas color.
+
+5. CONSOLE:
+   - 'diagrams' (or 'list diagrams'): list with counts.
+   - 'embed <title>': copy ![[title]] to the clipboard.
+   - 'open', 'inspect', 'links', 'favorite' and 'delete'
+     accept diagram titles too.`,
     tutorialSnippets: `1. SNIPPET LIBRARY:
    Store reusable code blocks with syntax highlighting.
 2. LINKING:
@@ -235,6 +313,7 @@ Type 'help' to see the full list of available commands.`,
    Click the copy icon to instantly send code to your clipboard.`,
     tutorialGraph: `1. NODES & EDGES:
    - Notes are colored by category.
+   - Diagrams are notes marked with a pencil icon.
    - Snippets are shown as purple nodes.
    - Lines represent [[bidirectional links]].
 2. NAVIGATION:
@@ -245,10 +324,16 @@ Type 'help' to see the full list of available commands.`,
    'dashboard', 'notes', 'snippets', 'graph', 'settings'.
 2. POWER SEARCH:
    'search <query>' scans titles, content, and tags.
-3. GRAPH UTILS:
+   Diagrams are searchable by the text drawn on them.
+3. CREATION:
+   - 'new <title>' creates a note (Ctrl+Alt+N).
+   - 'new-diagram <title>' creates a diagram (Ctrl+Alt+D).
+   - 'diagrams' lists diagrams, 'embed <title>' copies
+     the ![[title]] markup.
+4. GRAPH UTILS:
    - 'links <title>': View all connections for a specific note.
    - 'orphans': Find notes that aren't connected to anything yet.
-4. TIPS:
+5. TIPS:
    - Use 'TAB' to autocomplete commands.
    - Use 'Up/Down' arrows to navigate history.`,
     tutorialStyles: `HOW TO STYLE YOUR NOTES:
@@ -274,6 +359,7 @@ Type 'help' to see the full list of available commands.`,
 4. BIDIRECTIONAL LINKS:
    - Type [[Target Note]] to create a link. If the note exists,
      it becomes a clickable shortcut and shows in the Graph.
+   - ![[Diagram title]] embeds a drawn diagram ('/embed').
 
 5. LISTS & TASKS:
    - Bullet points with '-' or '*'.
@@ -428,6 +514,26 @@ Type 'help' to see the full list of available commands.`,
     collapse: 'Contraer',
     expand: 'Expandir',
     newNote: 'Nueva nota',
+    newDiagram: 'Nuevo diagrama',
+    markdownNote: 'Nota markdown',
+    diagram: 'Diagrama',
+    untitledDiagram: 'Diagrama sin título',
+    linkedNotes: 'Notas vinculadas',
+    outgoingLinks: 'Vínculos salientes',
+    backlinks: 'Referencias entrantes',
+    noLinksYet: 'Aún no hay vínculos',
+    insertLink: 'Insertar vínculo',
+    searchNotesToLink: 'Buscar notas para vincular...',
+    diagramLinkHint: 'Escribe [[Título de nota]] en un texto o como enlace de un elemento para conectar notas.',
+    diagramNotFound: 'Diagrama no encontrado',
+    diagramLoadError: 'No se pudo renderizar el diagrama',
+    imageUploadError: 'No se pudo subir una imagen del diagrama',
+    elements: 'elementos',
+    linkedDiagrams: 'Diagramas vinculados',
+    openDiagram: 'Abrir diagrama',
+    diagramWelcomeHeading: 'Dibuja arquitecturas, flujos e ideas. Escribe [[Título de nota]] para conectarlos con tus notas.',
+    diagramToolbarHint: 'Elige una herramienta',
+    diagramMenuHint: 'Exportar y notas vinculadas',
     search: 'Buscar...',
     manageWorkspaces: 'Gestionar espacios',
     newWorkspace: 'Nuevo',
@@ -436,6 +542,19 @@ Type 'help' to see the full list of available commands.`,
     generalSettings: 'Configuración General',
     appearance: 'Apariencia',
     keyboardShortcuts: 'Atajos de Teclado',
+    shortcutGroupGeneral: 'General',
+    shortcutGroupEditor: 'Editor y consola',
+    shortcutCommandPalette: 'Abrir la paleta de comandos',
+    shortcutNewNote: 'Crear nueva nota',
+    shortcutNewDiagram: 'Crear nuevo diagrama',
+    shortcutToggleSidebar: 'Mostrar u ocultar la barra lateral',
+    shortcutSwitchWorkspace: 'Cambiar al espacio de trabajo 1–9',
+    shortcutCloseModals: 'Cerrar modales y paletas',
+    shortcutSaveNote: 'Guardar la nota o el diagrama actual',
+    shortcutTogglePreview: 'Alternar vista previa de la nota',
+    shortcutConsoleAutocomplete: 'Autocompletar (consola)',
+    shortcutConsoleHistory: 'Recorrer el historial de comandos (consola)',
+    shortcutDiagramNote: 'Dentro del lienzo de un diagrama, Ctrl+K (enlace de elemento), Ctrl+B y Esc pertenecen al editor de dibujo. Pulsa ? en el lienzo para ver todos sus atajos de dibujo. Los atajos con Ctrl+Alt funcionan con cualquier distribución de teclado; la tecla AltGr sigue escribiendo símbolos como @ o #.',
     workspaceSettings: 'Configuración del Espacio',
     workspaceName: 'Nombre del Espacio',
     description: 'Descripción',
@@ -490,7 +609,7 @@ Type 'help' to see the full list of available commands.`,
     quickSearch: 'Búsqueda rápida',
     authSystemFound: '[[Auth System]] encontrado',
     smartNotes: 'Notas Técnicas Inteligentes',
-    smartNotesDesc: 'Escribe documentación con fragmentos de código, diagramas y enlaces bidireccionales.',
+    smartNotesDesc: 'Escribe documentación con fragmentos de código, diagramas a mano alzada y enlaces bidireccionales.',
     knowledgeGraphDesc: 'Visualiza conexiones entre notas, módulos y arquitectura.',
     devConsoleDesc: 'Ejecuta comandos, navega por las notas y gestiona tu base de conocimientos.',
     snippetLibrary: 'Biblioteca de Fragmentos',
@@ -530,6 +649,7 @@ Type 'help' to see the full list of available commands.`,
     goConsole: 'Ir a Consola Dev',
     goSettings: 'Ir a Configuración',
     createNewNote: 'Crear Nueva Nota',
+    createNewDiagram: 'Crear Nuevo Diagrama',
     searchPlaceholder: 'Buscar notas, fragmentos o comandos...',
     noResults: 'No se encontraron resultados para',
     navigate: 'Navegar',
@@ -562,6 +682,15 @@ Type 'help' to see the full list of available commands.`,
     noteNotFound: 'Nota no encontrada',
     openedNote: 'Nota abierta',
     createdNewNote: 'Nueva nota creada',
+    diagramOperations: 'Operaciones de Diagramas',
+    foundDiagrams: 'Diagramas encontrados',
+    noDiagramsFound: 'No se encontraron diagramas',
+    createFirstDiagramWith: 'Crea tu primer diagrama con',
+    createdNewDiagram: 'Nuevo diagrama creado',
+    openedDiagram: 'Diagrama abierto',
+    workspaceRequiredForDiagram: 'Crea un espacio de trabajo antes de añadir diagramas.',
+    embedCopied: 'Copiado al portapapeles: pégalo en una nota para incrustar el diagrama',
+    embedCopyManually: 'Copia esto en una nota para incrustar el diagrama',
     deletedNote: 'Nota eliminada',
     toggledFavorite: 'Favorito cambiado para',
     knowledgeBaseStats: 'ESTADÍSTICAS DE LA BASE DE CONOCIMIENTO',
@@ -598,6 +727,7 @@ Type 'help' to see the full list of available commands.`,
     tutorialTitle: 'GUÍA DEL SISTEMA Y TUTORIAL',
     tutorialIndex: `Bienvenido a Orqelis. Elige un tema para aprender más:
 - 'tutorial notes'     : Crear y gestionar notas técnicas
+- 'tutorial diagrams'  : Dibujar diagramas y conectarlos a notas
 - 'tutorial snippets'  : Guardar y vincular fragmentos de código
 - 'tutorial graph'     : Conectar ideas con enlaces bidireccionales
 - 'tutorial console'   : Dominar la interfaz de comandos
@@ -609,6 +739,7 @@ Escribe 'help' para ver la lista completa de comandos disponibles.`,
 1. CREACIÓN:
    - Comando: 'new <título>' para crear al instante desde la consola.
    - Botón: Usa 'Nueva Nota' en la barra lateral.
+   - Atajo: Ctrl+Alt+N (Ctrl+Alt+D crea un diagrama).
 
 2. ESCRITURA Y ESTILO:
    - Usa 'tutorial styles' para ver todas las opciones de Markdown.
@@ -619,6 +750,9 @@ Escribe 'help' para ver la lista completa de comandos disponibles.`,
      Son insensibles a mayúsculas y crean accesos directos.
    - **Fragmentos**: Vincula bloques reutilizables con 'Vincular Código'.
    - **Visualización**: Cada enlace crea una conexión en el Grafo.
+   - **Diagramas**: [[Diagrama]] muestra vista previa al
+     pasar el ratón y en 'Diagramas vinculados';
+     ![[Diagrama]] lo incrusta.
 
 4. ORGANIZACIÓN:
    - **Grupos**: Agrupación semántica (Proyecto X, Infra, Backend).
@@ -636,6 +770,38 @@ Escribe 'help' para ver la lista completa de comandos disponibles.`,
 
 6. ELIMINACIÓN:
    - 'delete <título>' o usa el icono de papelera en el editor.`,
+    tutorialDiagrams: `DIAGRAMAS A MANO ALZADA (EXCALIDRAW)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. CREACIÓN:
+   - Atajo: Ctrl+Alt+D, desde cualquier parte de la app.
+   - Botón: icono de lápiz junto a 'Nueva nota'.
+   - Comando: 'new-diagram <título>'.
+   Los diagramas son notas: categoría, grupo, etiquetas y
+   favoritos funcionan igual. Se guardan automáticamente.
+
+2. CONECTAR NOTAS:
+   - Escribe [[Título de nota]] en un texto del lienzo.
+   - O ponlo como enlace de un elemento (Ctrl+K).
+   - El icono de vínculo de la cabecera muestra vínculos
+     salientes y entrantes, y permite insertar vínculos.
+
+3. USAR DIAGRAMAS EN NOTAS:
+   - [[Título del diagrama]]: vínculo con vista previa al
+     pasar el ratón y tarjeta en 'Diagramas vinculados'.
+   - ![[Título del diagrama]]: incrusta el diagrama.
+     En el editor escribe '/incrustar' para insertarlo.
+
+4. IMÁGENES Y EXPORTACIÓN:
+   - Pega o arrastra imágenes: se guardan en el servidor
+     (no dentro de la base de datos) junto al diagrama.
+   - Menú (arriba a la izquierda): exportar, guardar como
+     imagen y color del lienzo.
+
+5. CONSOLA:
+   - 'diagrams' (o 'list diagrams'): lista con totales.
+   - 'embed <título>': copia ![[título]] al portapapeles.
+   - 'open', 'inspect', 'links', 'favorite' y 'delete'
+     también aceptan títulos de diagramas.`,
     tutorialSnippets: `1. BIBLIOTECA DE FRAGMENTOS:
    Guarda bloques de código reutilizables con resaltado de sintaxis.
 2. VINCULACIÓN:
@@ -645,6 +811,7 @@ Escribe 'help' para ver la lista completa de comandos disponibles.`,
    Haz clic en el icono de copiar para enviar el código al portapapeles.`,
     tutorialGraph: `1. NODOS Y ENLACES:
    - Las notas están coloreadas por categoría.
+   - Los diagramas son notas con un icono de lápiz.
    - Los fragmentos de código son nodos púrpuras.
    - Las líneas representan [[enlaces bidireccionales]].
 2. NAVEGACIÓN:
@@ -655,10 +822,16 @@ Escribe 'help' para ver la lista completa de comandos disponibles.`,
    'dashboard', 'notes', 'snippets', 'graph', 'settings'.
 2. BÚSQUEDA PODEROSA:
    'search <consulta>' escanea títulos, contenido y etiquetas.
-3. UTILIDADES DE GRAFO:
+   Los diagramas se encuentran por el texto dibujado.
+3. CREACIÓN:
+   - 'new <título>' crea una nota (Ctrl+Alt+N).
+   - 'new-diagram <título>' crea un diagrama (Ctrl+Alt+D).
+   - 'diagrams' lista diagramas y 'embed <título>' copia
+     el código ![[título]].
+4. UTILIDADES DE GRAFO:
    - 'links <título>': Ver todas las conexiones de una nota específica.
    - 'orphans': Encontrar notas que aún no están conectadas a nada.
-4. CONSEJOS:
+5. CONSEJOS:
    - Usa 'TAB' para autocompletar comandos.
    - Usa las flechas 'Arriba/Abajo' para navegar por el historial.`,
     tutorialStyles: `CÓMO DAR ESTILO A TUS NOTAS:
@@ -684,6 +857,7 @@ Escribe 'help' para ver la lista completa de comandos disponibles.`,
 4. ENLACES BIDIRECCIONALES:
    - Escribe [[Nota Destino]] para crear un enlace. Si la nota
      existe, se vuelve un acceso directo y aparece en el Grafo.
+   - ![[Diagrama]] incrusta un diagrama ('/incrustar').
 
 5. LISTAS Y TAREAS:
    - Viñetas con '-' o '*'.

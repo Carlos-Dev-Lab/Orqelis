@@ -99,6 +99,8 @@ app.use(cors({
 }));
 
 // Body Parsers
+// Diagram scenes can exceed 1mb; image binaries use their own raw parser in the notes files router
+app.use(['/api/notes', '/api/import'], express.json({ limit: '5mb' }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 

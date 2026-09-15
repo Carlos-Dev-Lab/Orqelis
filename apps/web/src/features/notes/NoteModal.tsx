@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Suspense, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Star,
@@ -10,7 +10,10 @@ import {
   Code2,
   Layers,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Link2,
+  PenTool,
+  Loader2
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -19,13 +22,64 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { cn, extractBidirectionalLinks, getCategoryColor } from '@/shared/utils';
 import { useAppStore } from '@/shared/store';
-import { t } from '@/shared/i18n';
+import { t, type Language } from '@/shared/i18n';
 import type { Note } from '@orqelis/shared';
 import { SnippetModal } from '@/features/snippets/SnippetModal';
 import { MarkdownAssistant } from './MarkdownAssistant';
 import { MermaidDiagram } from './MermaidDiagram';
+import { LinkedNotesPanel } from './LinkedNotesPanel';
+import { DiagramEditor, DiagramPreview, type DiagramEditorHandle } from './diagram';
+import { DiagramLinkChip, LinkedDiagrams } from './diagram/DiagramLinkPreview';
 
 const categories: Note['category'][] = ['frontend', 'backend', 'database', 'infrastructure', 'devops', 'docs'];
+
+// Code fence language used to render ![[Diagram title]] embeds (word chars only so it matches `language-(\w+)`)
+const DIAGRAM_EMBED_LANGUAGE = 'orqelis_diagram';
+
+function EditorFallback() {
+  return (
+    <div className="flex h-full items-center justify-center text-on-surface-variant">
+      <Loader2 className="h-6 w-6 animate-spin" />
+    </div>
+  );
+}
+
+interface DiagramEmbedProps {
+  title: string;
+  notes: Note[];
+  theme: 'dark' | 'light';
+  language: Language;
+  onOpen: (title: string) => void;
+}
+
+function DiagramEmbed({ title, notes, theme, language, onOpen }: DiagramEmbedProps) {
+  const diagram = notes.find((note) => note.type === 'diagram' && note.title.toLowerCase() === title.trim().toLowerCase());
+
+  if (!diagram) {
+    return (
+      <div className="not-prose my-6 flex items-center gap-2 rounded-2xl border border-dashed border-on-surface/15 px-4 py-6 text-sm text-on-surface-variant">
+        <PenTool className="h-4 w-4" />
+        {t('diagramNotFound', language)}: <span className="font-mono">{title}</span>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(diagram.title)}
+      className="not-prose group my-6 block w-full overflow-hidden rounded-2xl border border-on-surface/10 bg-on-surface/[0.03] text-left transition-colors hover:border-primary/30"
+    >
+      <Suspense fallback={<div className="h-72" />}>
+        <DiagramPreview note={diagram} theme={theme} variant="embed" className="h-72 sm:h-96 p-2" errorLabel={t('diagramLoadError', language)} />
+      </Suspense>
+      <div className="flex items-center gap-2 border-t border-on-surface/5 px-4 py-2 text-xs text-on-surface-variant group-hover:text-primary">
+        <PenTool className="h-3.5 w-3.5" />
+        <span className="truncate font-medium">{diagram.title}</span>
+      </div>
+    </button>
+  );
+}
 
 interface NoteModalProps {
   isOpen: boolean;
@@ -62,6 +116,11 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [activeSnippetId, setActiveSnippetId] = useState<string | null>(null);
   const [isSnippetModalOpen, setIsSnippetModalOpen] = useState(false);
+  const [isDiagramDirty, setIsDiagramDirty] = useState(false);
+  const [showLinksPanel, setShowLinksPanel] = useState(false);
+  // Diagram links while editing (the store copy is only synced when the diagram closes)
+  const [diagramLinks, setDiagramLinks] = useState<string[] | null>(null);
+  const diagramRef = useRef<DiagramEditorHandle>(null);
   
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const lastNoteIdRef = useRef<string | null | undefined>(undefined);
@@ -70,6 +129,7 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
     notes.find(n => n.id === noteId),
     [notes, noteId]
   );
+  const isDiagram = activeNote?.type === 'diagram';
 
   // Initialize local state when note changes or modal opens
   useEffect(() => {
@@ -83,6 +143,10 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
           setLocalTags(activeNote.tags);
           setLocalSnippetIds(activeNote.snippetIds || []);
           setIsPreview(true);
+          setIsDiagramDirty(false);
+          setDiagramLinks(null);
+          // Diagrams need room: open them full screen
+          if (activeNote.type === 'diagram') setIsFullScreen(true);
           lastNoteIdRef.current = noteId;
         } else if (!noteId) {
           setLocalContent('');
@@ -110,7 +174,15 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
     const links = extractBidirectionalLinks(localContent);
 
     try {
-      if (noteId && activeNote) {
+      if (noteId && activeNote?.type === 'diagram') {
+        // Diagram content/links are owned by the diagram editor's own autosave
+        await updateNote(noteId, {
+          title: localTitle || 'Untitled',
+          category: localCategory,
+          tags: localTags,
+          snippetIds: localSnippetIds,
+        });
+      } else if (noteId && activeNote) {
         await updateNote(noteId, {
           title: localTitle || 'Untitled',
           content: localContent,
@@ -204,6 +276,7 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
       void saveNote();
     };
     const handlePreviewShortcut = () => {
+      if (isDiagram) return;
       setIsPreview((preview) => !preview);
     };
     const handleCloseShortcut = () => {
@@ -219,20 +292,42 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
       window.removeEventListener('orqelis:toggle-note-preview', handlePreviewShortcut);
       window.removeEventListener('orqelis:close-note-modal', handleCloseShortcut);
     };
-  }, [isOpen, saveNote, handleClose]);
+  }, [isOpen, saveNote, handleClose, isDiagram]);
 
   // Extract detected links for display
 
   const contentWithInternalLinks = useMemo(() => {
-    return localContent.replace(/\[\[([^\]]+)\]\]/g, '[$1](#internal-link)');
+    return localContent
+      // ![[Diagram]] embeds become a code fence rendered by DiagramEmbed
+      .replace(/!\[\[([^\]]+)\]\]/g, (_match, title: string) => `\n\n\`\`\`${DIAGRAM_EMBED_LANGUAGE}\n${title}\n\`\`\`\n\n`)
+      .replace(/\[\[([^\]]+)\]\]/g, '[$1](#internal-link)');
   }, [localContent]);
 
   const handleInternalLinkClick = useCallback((title: string) => {
-    const targetNote = notes.find(n => n.title.toLowerCase() === title.toLowerCase());
+    const targetNote = notes.find(n => n.title.toLowerCase() === title.trim().toLowerCase());
     if (targetNote) {
       setActiveNoteId(targetNote.id);
     }
   }, [notes, setActiveNoteId]);
+
+  // Diagrams referenced with [[links]] (not already embedded with ![[...]]) get preview cards
+  const linkedDiagrams = useMemo(() => {
+    if (isDiagram) return [];
+    const embedded = new Set(
+      Array.from(localContent.matchAll(/!\[\[([^\]]+)\]\]/g), (match) => match[1].trim().toLowerCase())
+    );
+    const titles = new Set(extractBidirectionalLinks(localContent).map((title) => title.trim().toLowerCase()));
+    return notes.filter(
+      (note) => note.type === 'diagram' && note.id !== noteId && titles.has(note.title.toLowerCase()) && !embedded.has(note.title.toLowerCase())
+    );
+  }, [isDiagram, localContent, notes, noteId]);
+
+  const openLinksPanel = useCallback(() => setShowLinksPanel(true), []);
+
+  const currentLinks = useMemo(
+    () => (isDiagram ? diagramLinks ?? activeNote?.links ?? [] : extractBidirectionalLinks(localContent)),
+    [isDiagram, diagramLinks, activeNote?.links, localContent]
+  );
 
   if (!isOpen) return null;
 
@@ -245,13 +340,23 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleClose}
-            className="absolute inset-0 bg-background/60 backdrop-blur-md"
+            className={cn(
+              "absolute inset-0",
+              // Blurring the page behind a live canvas is expensive: diagrams use a plain backdrop
+              isDiagram ? "bg-background/95" : "bg-background/60 backdrop-blur-md"
+            )}
           />
           
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            // Diagrams fade in without transforms: a scaled container makes Excalidraw
+            // measure a wrong canvas rect and the cursor drifts from where clicks land
+            initial={isDiagram ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            exit={isDiagram ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 20 }}
+            onAnimationComplete={() => diagramRef.current?.refresh()}
+            onTransitionEnd={(event) => {
+              if (event.target === event.currentTarget) diagramRef.current?.refresh();
+            }}
             className={cn(
               "relative flex flex-col bg-surface-container-lowest border border-on-surface/10 shadow-2xl overflow-hidden transition-all duration-300",
               isFullScreen ? "w-full h-full rounded-none" : "w-full max-w-5xl h-[95vh] sm:h-[90vh] rounded-none sm:rounded-3xl"
@@ -272,7 +377,7 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
 
               <div className="flex items-center gap-1 sm:gap-2">
                 <div className="hidden sm:flex items-center gap-2 mr-4 text-[10px] font-mono uppercase tracking-widest">
-                  {hasUnsavedChanges ? (
+                  {hasUnsavedChanges || isDiagramDirty ? (
                     <span className="text-warning flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
                       {t('unsaved', language)}
@@ -285,15 +390,38 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
                   )}
                 </div>
 
+                {isDiagram ? (
+                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary/10 text-secondary text-xs font-bold">
+                    <PenTool className="w-3.5 h-3.5" />
+                    {t('diagram', language)}
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setIsPreview(!isPreview)}
+                    className={cn(
+                      "p-2 rounded-xl transition-all",
+                      isPreview ? "bg-primary/20 text-primary" : "hover:bg-on-surface/5 text-on-surface-variant"
+                    )}
+                    title={isPreview ? t('editMode', language) : t('previewMode', language)}
+                  >
+                    {isPreview ? <Edit3 className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                )}
+
                 <button
-                  onClick={() => setIsPreview(!isPreview)}
+                  onClick={() => setShowLinksPanel(!showLinksPanel)}
                   className={cn(
-                    "p-2 rounded-xl transition-all",
-                    isPreview ? "bg-primary/20 text-primary" : "hover:bg-on-surface/5 text-on-surface-variant"
+                    "relative p-2 rounded-xl transition-all",
+                    showLinksPanel ? "bg-primary/20 text-primary" : "hover:bg-on-surface/5 text-on-surface-variant"
                   )}
-                  title={isPreview ? t('editMode', language) : t('previewMode', language)}
+                  title={t('linkedNotes', language)}
                 >
-                  {isPreview ? <Edit3 className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  <Link2 className="w-5 h-5" />
+                  {currentLinks.length > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-primary text-on-primary text-[9px] font-bold leading-4 text-center">
+                      {currentLinks.length}
+                    </span>
+                  )}
                 </button>
 
                 <button
@@ -456,8 +584,24 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
             </div>
 
             {/* Editor Content */}
-            <div className="relative z-10 flex-1 overflow-hidden bg-surface-container-lowest">
-              {isPreview ? (
+            <div className="relative z-10 flex flex-1 overflow-hidden bg-surface-container-lowest">
+              <div className="relative min-w-0 flex-1 overflow-hidden">
+              {isDiagram && activeNote ? (
+                <Suspense fallback={<EditorFallback />}>
+                  <DiagramEditor
+                    // Remount per note so autosave state never leaks between diagrams
+                    key={activeNote.id}
+                    ref={diagramRef}
+                    note={activeNote}
+                    theme={theme}
+                    language={language}
+                    onDirtyChange={setIsDiagramDirty}
+                    onLinksChange={setDiagramLinks}
+                    onOpenLinksPanel={openLinksPanel}
+                    onOpenNote={handleInternalLinkClick}
+                  />
+                </Suspense>
+              ) : isPreview ? (
                 <div className="h-full overflow-y-auto custom-scrollbar p-6 sm:p-10">
                   <article className="prose prose-cyan dark:prose-invert max-w-none text-on-surface">
                     <ReactMarkdown
@@ -467,6 +611,17 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
                         code({ node, className, children, ...props }) {
                           const match = /language-(\w+)/.exec(className || '');
                           const inline = !match;
+                          if (match?.[1] === DIAGRAM_EMBED_LANGUAGE) {
+                            return (
+                              <DiagramEmbed
+                                title={String(children).trim()}
+                                notes={notes}
+                                theme={theme}
+                                language={language}
+                                onOpen={handleInternalLinkClick}
+                              />
+                            );
+                          }
                           if (match?.[1].toLowerCase() === 'mermaid') {
                             return <MermaidDiagram chart={String(children).replace(/\n$/, '')} theme={theme} language={language} />;
                           }
@@ -485,11 +640,30 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
                             </code>
                           );
                         },
+                        pre({ node, children, ...props }) {
+                          // Diagram embeds render their own card; skip the <pre> wrapper
+                          const codeNode = node?.children?.[0];
+                          const className = codeNode && 'properties' in codeNode ? codeNode.properties?.className : undefined;
+                          if (Array.isArray(className) && className.includes(`language-${DIAGRAM_EMBED_LANGUAGE}`)) {
+                            return <>{children}</>;
+                          }
+                          return <pre {...props}>{children}</pre>;
+                        },
                         p({ children }) {
                           return <p className="leading-relaxed mb-4 last:mb-0">{children}</p>;
                         },
                         a({ children, href, ...props }) {
                           if (href === '#internal-link') {
+                            const linkedDiagram = notes.find(
+                              (note) => note.type === 'diagram' && note.title.toLowerCase() === String(children).trim().toLowerCase()
+                            );
+                            if (linkedDiagram) {
+                              return (
+                                <DiagramLinkChip diagram={linkedDiagram} theme={theme} language={language} onOpen={handleInternalLinkClick}>
+                                  {children}
+                                </DiagramLinkChip>
+                              );
+                            }
                             return (
                               <button
                                 onClick={() => handleInternalLinkClick(String(children))}
@@ -532,13 +706,15 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
                       {contentWithInternalLinks || `*${t('noContentYet', language)}*`}
                     </ReactMarkdown>
 
+                    <LinkedDiagrams diagrams={linkedDiagrams} theme={theme} language={language} onOpen={handleInternalLinkClick} />
+
                     {/* Linked Snippets Section */}
                     {localSnippetIds.length > 0 && (
                       <div className="mt-12 pt-8 border-t border-on-surface/5">
-                        <h3 className="text-sm font-bold text-on-surface-variant uppercase tracking-widest mb-6 flex items-center gap-2">
+                        <div role="heading" aria-level={3} className="text-sm font-bold text-on-surface-variant uppercase tracking-widest mb-6 flex items-center gap-2">
                           <Code2 className="w-4 h-4" />
                           {t('relatedSnippets', language)}
-                        </h3>
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {localSnippetIds.map(id => {
                             const snippet = snippets.find(s => s.id === id);
@@ -574,13 +750,35 @@ export function NoteModal({ isOpen, onClose, noteId }: NoteModalProps) {
                   noteTitles={notes.filter((note) => note.id !== noteId).map((note) => note.title)}
                 />
               )}
+              </div>
+
+              {showLinksPanel && (
+                <div className="absolute inset-y-0 right-0 z-20 w-72 max-w-[85%] shadow-2xl sm:static sm:shadow-none">
+                  <LinkedNotesPanel
+                    title={localTitle}
+                    noteId={noteId}
+                    links={currentLinks}
+                    notes={notes}
+                    language={language}
+                    onOpenNote={handleInternalLinkClick}
+                    onClose={() => setShowLinksPanel(false)}
+                    onInsertLink={isDiagram ? (title) => diagramRef.current?.insertNoteLink(title) : undefined}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Footer / Status Bar */}
             <footer className="px-6 py-3 border-t border-on-surface/5 flex items-center justify-between shrink-0 bg-on-surface/5">
               <div className="flex items-center gap-4 text-[10px] font-mono text-on-surface-variant/60 uppercase tracking-widest">
-                <span>{localContent.length} {t('characters', language)}</span>
-                <span>{localContent.split(/\s+/).filter(Boolean).length} {t('words', language)}</span>
+                {isDiagram ? (
+                  <span className="flex items-center gap-1.5"><PenTool className="w-3 h-3" /> {t('diagram', language)}</span>
+                ) : (
+                  <>
+                    <span>{localContent.length} {t('characters', language)}</span>
+                    <span>{localContent.split(/\s+/).filter(Boolean).length} {t('words', language)}</span>
+                  </>
+                )}
               </div>
               
               <div className="flex items-center gap-2">

@@ -9,7 +9,8 @@ import {
   Settings,
   ArrowRight,
   X,
-  Star
+  Star,
+  PenTool
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { useAppStore } from '@/shared/store';
@@ -35,6 +36,7 @@ export function CommandPalette() {
     setActiveNoteId,
     setNoteModalOpen,
     openNewNote,
+    openNewDiagram,
     language,
   } = useAppStore();
   
@@ -53,15 +55,16 @@ export function CommandPalette() {
     { id: 'nav-settings', type: 'navigation', title: t('goSettings', language), icon: Settings, action: () => setCurrentView('settings'), keywords: ['settings', 'preferences'] },
     
     // Actions
-    { id: 'action-new-note', type: 'action', title: t('createNewNote', language), icon: FileText, action: openNewNote, keywords: ['new', 'create', 'note'] },
+    { id: 'action-new-note', type: 'action', title: t('createNewNote', language), description: 'Ctrl+Alt+N', icon: FileText, action: openNewNote, keywords: ['new', 'create', 'note', 'nota', 'nueva'] },
+    { id: 'action-new-diagram', type: 'action', title: t('createNewDiagram', language), description: 'Ctrl+Alt+D', icon: PenTool, action: () => void openNewDiagram(), keywords: ['new', 'create', 'diagram', 'excalidraw', 'draw', 'diagrama', 'nuevo', 'dibujo'] },
     
     // Notes
     ...notes.map(note => ({
       id: `note-${note.id}`,
       type: 'note' as const,
       title: note.title,
-      description: note.category,
-      icon: note.isFavorite ? Star : FileText,
+      description: note.type === 'diagram' ? `${t('diagram', language)} · ${note.category}` : note.category,
+      icon: note.isFavorite ? Star : note.type === 'diagram' ? PenTool : FileText,
       action: () => { setActiveNoteId(note.id); setNoteModalOpen(true); setCurrentView('editor'); },
       keywords: [...note.tags, ...note.technologies, note.category],
     })),

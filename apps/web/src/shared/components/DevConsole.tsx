@@ -12,11 +12,14 @@ import {
   BarChart3,
   Activity,
   Server,
-  CornerDownLeft
+  CornerDownLeft,
+  PenTool
 } from 'lucide-react';
+import type { Note } from '@orqelis/shared';
 import { cn, formatDate } from '@/shared/utils';
 import { useAppStore } from '@/shared/store';
 import { t } from '@/shared/i18n';
+import { getReferencedFileIds, parseDiagramData } from '@/features/notes/diagram/diagramScene';
 
 interface CommandOutput {
   id: string;
@@ -27,7 +30,7 @@ interface CommandOutput {
 
 const COMMANDS = [
   'help', 'clear', 'dashboard', 'notes', 'graph', 'snippets', 'connections',
-  'settings', 'list', 'search', 'open', 'new', 'delete', 'confirm', 'cancel',
+  'settings', 'list', 'search', 'open', 'new', 'new-diagram', 'diagrams', 'embed', 'delete', 'confirm', 'cancel',
   'favorite', 'stats', 'status', 'links', 'inspect', 'orphans', 'activity',
   'history', 'categories', 'export', 'tutorial', 'theme', 'workspace', 'notify',
   'whoami', 'date',
@@ -46,6 +49,19 @@ const parseCommand = (value: string) => {
 };
 
 const quoteArgument = (value: string) => /\s/.test(value) ? `"${value.replace(/"/g, '\\"')}"` : value;
+
+const isDiagram = (note: Note) => note.type === 'diagram';
+
+/** Element / image counts of a diagram note (deleted elements are not stored). */
+const getDiagramStats = (note: Note) => {
+  const scene = parseDiagramData(note.diagramData);
+  return { elements: scene.elements.length, images: getReferencedFileIds(scene.elements).length };
+};
+
+const formatDiagramRow = (note: Note) => {
+  const { elements, images } = getDiagramStats(note);
+  return `  ${note.isFavorite ? '★' : '○'} [${note.category.padEnd(12)}] ${note.title} (${elements} elements, ${images} images, ${note.links.length} links)`;
+};
 
 const CONSOLE_BOX_DIVIDER = '__ORQELIS_CONSOLE_BOX_DIVIDER__';
 
@@ -100,6 +116,7 @@ function DevConsole() {
     setNoteModalOpen,
     setCurrentView,
     createNote,
+    openNewDiagram,
     deleteNote,
     toggleNoteFavorite,
     setTheme,
@@ -197,8 +214,14 @@ ${t('noteOperations', language)}:
   inspect <title>     Show detailed properties of a note
   orphans             List notes without any links
 
+${t('diagramOperations', language)}:
+  new-diagram <title> Create a new diagram and open it (Ctrl+Alt+D)
+  diagrams            List diagrams (alias: list diagrams)
+  embed <title>       Copy ![[title]] to embed a diagram in a note
+  open, favorite, links, inspect and delete also accept diagram titles
+
 ${t('systemCustomization', language)}:
-  tutorial [topic]    Show guide (notes, snippets, graph, console, styles)
+  tutorial [topic]    Show guide (notes, diagrams, snippets, graph, console, styles)
   theme <light|dark>  Change interface theme
   workspace <name>    Switch to another workspace
   notify <msg>        Send a test notification
@@ -227,6 +250,8 @@ ${t('tips', language)}:
 
           if (topic === 'notes') {
             tutorialContent = t('tutorialNotes', language);
+          } else if (topic === 'diagrams') {
+            tutorialContent = t('tutorialDiagrams', language);
           } else if (topic === 'snippets') {
             tutorialContent = t('tutorialSnippets', language);
           } else if (topic === 'graph') {
@@ -340,6 +365,17 @@ Active Workspace: ${workspaces.find(w => w.id === activeWorkspaceId)?.name || 'N
             break;
           }
 
+          if (listType === 'diagrams') {
+            const diagramNotes = notes.filter(isDiagram);
+            addOutput(
+              diagramNotes.length ? 'output' : 'info',
+              diagramNotes.length
+                ? `${t('foundDiagrams', language)} ${diagramNotes.length}:\n\n${diagramNotes.map(formatDiagramRow).join('\n')}`
+                : `${t('noDiagramsFound', language)}. ${t('createFirstDiagramWith', language)}: new-diagram <title>`
+            );
+            break;
+          }
+
           if (listType === 'groups') {
             const rows = groups.map(g => `  • ${g.name}${g.description ? ` — ${g.description}` : ''}`).join('\n');
             addOutput(rows ? 'output' : 'info', rows ? `Groups (${groups.length}):\n\n${rows}` : 'No groups found.');
@@ -368,11 +404,53 @@ Active Workspace: ${workspaces.find(w => w.id === activeWorkspaceId)?.name || 'N
             );
           } else {
             const noteList = filteredNotes.map(n => 
-              `  ${n.isFavorite ? '★' : '○'} [${n.category.padEnd(12)}] ${n.title} (${n.links.length} links)`
+              `  ${n.isFavorite ? '★' : '○'} [${n.category.padEnd(12)}] ${n.type === 'diagram' ? '[diagram] ' : ''}${n.title} (${n.links.length} links)`
             ).join('\n');
             addOutput('output', `${t('foundNotes', language)} ${filteredNotes.length}:\n\n${noteList}`);
           }
           break;
+
+        case 'diagrams': {
+          const diagramNotes = notes.filter(isDiagram);
+          addOutput(
+            diagramNotes.length ? 'output' : 'info',
+            diagramNotes.length
+              ? `${t('foundDiagrams', language)} ${diagramNotes.length}:\n\n${diagramNotes.map(formatDiagramRow).join('\n')}`
+              : `${t('noDiagramsFound', language)}. ${t('createFirstDiagramWith', language)}: new-diagram <title>`
+          );
+          break;
+        }
+
+        case 'new-diagram': {
+          const diagram = await openNewDiagram(args.join(' '));
+          if (diagram) {
+            addOutput('success', `${t('createdNewDiagram', language)}: ${diagram.title}`);
+          } else {
+            addOutput('error', t('workspaceRequiredForDiagram', language));
+          }
+          break;
+        }
+
+        case 'embed': {
+          const embedTitle = args.join(' ');
+          if (!embedTitle) {
+            addOutput('error', 'Usage: embed <diagram title>');
+            break;
+          }
+          const diagramToEmbed = notes.find(n => isDiagram(n) && n.title.toLowerCase() === embedTitle.toLowerCase());
+          if (!diagramToEmbed) {
+            addOutput('error', `${t('diagramNotFound', language)}: "${embedTitle}"\nTip: Use 'diagrams' to see all diagrams.`);
+            break;
+          }
+          const embedMarkup = `![[${diagramToEmbed.title}]]`;
+          try {
+            await navigator.clipboard.writeText(embedMarkup);
+            addOutput('success', `${t('embedCopied', language)}: ${embedMarkup}`);
+          } catch {
+            addOutput('info', `${t('embedCopyManually', language)}:\n\n  ${embedMarkup}`);
+          }
+          break;
+        }
 
         case 'search':
           const query = args.join(' ').toLowerCase();
@@ -397,7 +475,7 @@ Active Workspace: ${workspaces.find(w => w.id === activeWorkspaceId)?.name || 'N
             addOutput('info', `${t('noResults', language)}: "${query}"`);
           } else {
             const resultList = [
-              ...noteResults.map(n => `  • [note/${n.category}] ${n.title} - ${n.content.slice(0, 50)}...`),
+              ...noteResults.map(n => `  • [${isDiagram(n) ? 'diagram' : 'note'}/${n.category}] ${n.title} - ${n.content.slice(0, 50)}...`),
               ...snippetResults.map(s => `  • [snippet/${s.language}] ${s.title} - ${s.description.slice(0, 50)}...`),
             ].join('\n');
             addOutput('success', `${t('foundResultsFor', language)} "${query}":\n\n${resultList}`);
@@ -419,7 +497,7 @@ Active Workspace: ${workspaces.find(w => w.id === activeWorkspaceId)?.name || 'N
             setActiveNoteId(noteToOpen.id);
             setNoteModalOpen(true);
             setCurrentView('editor');
-            addOutput('success', `${t('openedNote', language)}: ${noteToOpen.title}`);
+            addOutput('success', `${t(isDiagram(noteToOpen) ? 'openedDiagram' : 'openedNote', language)}: ${noteToOpen.title}`);
           } else {
             addOutput('error', `${t('noteNotFound', language)}: "${titleToOpen}"\nTip: Use 'list' to see all notes.`);
           }
@@ -493,6 +571,7 @@ Active Workspace: ${workspaces.find(w => w.id === activeWorkspaceId)?.name || 'N
 
         case 'stats':
           const totalNotes = notes.length;
+          const totalDiagrams = notes.filter(isDiagram).length;
           const totalSnippets = snippets.length;
           const totalLinks = notes.reduce((acc, n) => acc + n.links.length, 0);
           const favorites = notes.filter(n => n.isFavorite).length;
@@ -507,6 +586,7 @@ Active Workspace: ${workspaces.find(w => w.id === activeWorkspaceId)?.name || 'N
           
           const statisticRows = [
             `Total Notes:      ${totalNotes}`,
+            `  Diagrams:       ${totalDiagrams}`,
             `Total Snippets:   ${totalSnippets}`,
             `Total Links:      ${totalLinks}`,
             `Favorites:        ${favorites}`,
@@ -527,6 +607,7 @@ ORQELIS STATUS
   Database         ${isDbOnline ? '● connected' : '○ unavailable'}
   Workspace        ${workspaces.find(w => w.id === activeWorkspaceId)?.name || 'None'}
   Notes            ${notes.length}
+  Diagrams         ${notes.filter(isDiagram).length}
   Snippets         ${snippets.length}
   Groups           ${groups.length}
   Connections      ${connections.length}
@@ -557,12 +638,13 @@ ORQELIS STATUS
             const isNote = 'content' in itemToInspect;
             const isSnippet = 'code' in itemToInspect;
             const isGroup = 'color' in itemToInspect && !isNote;
+            const diagramStats = isNote && isDiagram(itemToInspect as Note) ? getDiagramStats(itemToInspect as Note) : null;
 
             addOutput('output', `
 // PROPERTY_INSPECTOR v1.0
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 > uuid          : ${itemToInspect.id}
-> type          : ${isNote ? 'note' : isSnippet ? 'snippet' : 'group'}
+> type          : ${diagramStats ? 'diagram' : isNote ? 'note' : isSnippet ? 'snippet' : 'group'}
 > name/title    : ${'title' in itemToInspect ? itemToInspect.title : (itemToInspect as any).name}
 ${isNote ? `> category      : ${(itemToInspect as any).category}` : ''}
 ${isSnippet ? `> language      : ${(itemToInspect as any).language}` : ''}
@@ -571,6 +653,9 @@ ${'tags' in itemToInspect ? `> tags          : [${(itemToInspect as any).tags.jo
 > created_at    : ${new Date(itemToInspect.createdAt).toISOString()}
 > updated_at    : ${new Date(itemToInspect.updatedAt).toISOString()}
 ${isNote ? `> links_out     : ${(itemToInspect as any).links.length}` : ''}
+${diagramStats ? `> elements      : ${diagramStats.elements}` : ''}
+${diagramStats ? `> images        : ${diagramStats.images}` : ''}
+${diagramStats ? `> embed         : ![[${(itemToInspect as Note).title}]]` : ''}
 ${isNote ? `> snippet_ids   : [${(itemToInspect as any).snippetIds?.join(', ') || ''}]` : ''}
 ${isGroup ? `> color         : ${(itemToInspect as any).color}` : ''}
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -657,7 +742,7 @@ ${incoming.map(l => `    ← ${l}`).join('\n') || '    (none)'}
   }, [
     notes, snippets, workspaces, groups, connections, recentActivity, activeWorkspaceId,
     user, isServerOnline, isDbOnline, language, commandHistory, pendingDelete,
-    setCurrentView, setActiveNoteId, setNoteModalOpen, createNote, deleteNote, toggleNoteFavorite,
+    setCurrentView, setActiveNoteId, setNoteModalOpen, createNote, openNewDiagram, deleteNote, toggleNoteFavorite,
     setTheme, addNotification, switchWorkspace,
   ]);
 
@@ -681,7 +766,13 @@ ${incoming.map(l => `    ← ${l}`).join('\n') || '    (none)'}
       values = notes.map(note => ({
         value: `${command} ${quoteArgument(note.title)}`,
         label: note.title,
-        hint: note.category,
+        hint: isDiagram(note) ? `diagram · ${note.category}` : note.category,
+      }));
+    } else if (command === 'embed') {
+      values = notes.filter(isDiagram).map(note => ({
+        value: `embed ${quoteArgument(note.title)}`,
+        label: note.title,
+        hint: 'diagram',
       }));
     } else if (command === 'workspace') {
       values = workspaces.map(workspace => ({
@@ -690,7 +781,7 @@ ${incoming.map(l => `    ← ${l}`).join('\n') || '    (none)'}
         hint: workspace.id === activeWorkspaceId ? 'active' : 'workspace',
       }));
     } else if (command === 'tutorial') {
-      values = ['notes', 'snippets', 'graph', 'console', 'styles'].map(topic => ({
+      values = ['notes', 'diagrams', 'snippets', 'graph', 'console', 'styles'].map(topic => ({
         value: `tutorial ${topic}`,
         label: topic,
         hint: 'guide',
@@ -698,7 +789,7 @@ ${incoming.map(l => `    ← ${l}`).join('\n') || '    (none)'}
     } else if (command === 'theme') {
       values = ['light', 'dark'].map(theme => ({ value: `theme ${theme}`, label: theme, hint: 'theme' }));
     } else if (command === 'list') {
-      values = ['notes', 'snippets', 'groups', 'workspaces', 'connections', 'frontend', 'backend', 'database', 'infrastructure', 'devops', 'docs']
+      values = ['notes', 'diagrams', 'snippets', 'groups', 'workspaces', 'connections', 'frontend', 'backend', 'database', 'infrastructure', 'devops', 'docs']
         .map(type => ({ value: `list ${type}`, label: type, hint: 'collection' }));
     } else if (command === 'confirm' || command === 'cancel') {
       values = [{ value: `${command} delete`, label: 'delete', hint: pendingDelete?.title || 'no pending deletion' }];
@@ -754,6 +845,7 @@ ${incoming.map(l => `    ← ${l}`).join('\n') || '    (none)'}
   const quickCommands = [
     { command: 'help', label: language === 'es' ? 'Ayuda' : 'Help', icon: CircleHelp },
     { command: 'list notes', label: language === 'es' ? 'Notas' : 'Notes', icon: ListTree },
+    { command: 'diagrams', label: language === 'es' ? 'Diagramas' : 'Diagrams', icon: PenTool },
     { command: 'stats', label: language === 'es' ? 'Estadísticas' : 'Stats', icon: BarChart3 },
     { command: 'status', label: language === 'es' ? 'Estado' : 'Status', icon: Server },
     { command: 'activity', label: language === 'es' ? 'Actividad' : 'Activity', icon: Activity },

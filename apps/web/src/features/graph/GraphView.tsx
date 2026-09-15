@@ -33,6 +33,7 @@ import {
   Laptop,
   Globe,
   Database,
+  PenTool,
 } from 'lucide-react';
 import { cn, getCategoryColor } from '@/shared/utils';
 import { useAppStore } from '@/shared/store';
@@ -83,7 +84,9 @@ function NoteNode({ data, selected }: { data: any; selected: boolean }) {
     >
       <Handle type="target" position={Position.Top} className="w-2 h-2 !bg-primary opacity-0" />
       <div className="flex items-center gap-2 mb-1">
-        <FileText className="w-4 h-4 text-on-surface/60 dark:text-white/70" />
+        {data.noteType === 'diagram'
+          ? <PenTool className="w-4 h-4 text-on-surface/60 dark:text-white/70" />
+          : <FileText className="w-4 h-4 text-on-surface/60 dark:text-white/70" />}
         {data.isFavorite && <Star className="w-3 h-3 text-amber-500 fill-amber-500 dark:text-amber-400 dark:fill-amber-400" />}
       </div>
       <Tooltip content={data.label} color={data.category === 'frontend' ? 'var(--color-react)' : data.category === 'backend' ? 'var(--color-backend)' : data.category === 'database' ? 'var(--color-database)' : data.category === 'infrastructure' || data.category === 'infra' ? 'var(--color-infra)' : data.category === 'devops' ? 'var(--color-devops)' : undefined}>
@@ -240,7 +243,7 @@ function GraphView() {
     filteredNotes.forEach(n => {
       if (n.groupId) {
         if (!groupChildrenMap.has(n.groupId)) groupChildrenMap.set(n.groupId, []);
-        groupChildrenMap.get(n.groupId)!.push({ ...n, type: 'note' });
+        groupChildrenMap.get(n.groupId)!.push({ ...n, noteType: n.type, type: 'note' });
       } else {
         orphanNotes.push(n);
       }
@@ -342,6 +345,7 @@ function GraphView() {
             language: child.type === 'snippet' ? child.language : undefined,
             usageCount: child.type === 'snippet' ? child.usageCount : undefined,
             noteId: child.type === 'note' ? child.id : undefined,
+            noteType: child.type === 'note' ? child.noteType : undefined,
             snippetId: child.type === 'snippet' ? child.id : undefined,
           },
         });
@@ -361,6 +365,7 @@ function GraphView() {
           isFavorite: note.isFavorite,
           linkCount: note.links.length,
           noteId: note.id,
+          noteType: note.type,
         },
       });
     });

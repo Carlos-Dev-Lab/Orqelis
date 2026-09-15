@@ -314,9 +314,11 @@ export const authApi = {
     return data;
   },
 
+  /** Ends the session on the server (revokes it and clears the refresh cookie), then locally. */
   async logout() {
     try {
-      await fetchWithOfflineCheck(`${API_BASE}/auth/logout`, { method: 'POST' });
+      // Plain fetch: must run even if the client believes it is offline or the access token expired
+      await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include', keepalive: true });
     } catch { /* ignore */ }
     useAppStore.getState().logout();
   },
@@ -451,6 +453,29 @@ export const notesApi = {
       body: JSON.stringify({ groupId }),
     });
     return handleResponse<any>(res);
+  },
+
+  /** Uploads a diagram image; the binary is stored on disk by the API. */
+  async uploadFile(noteId: string, fileId: string, file: Blob) {
+    const res = await fetchWithOfflineCheck(
+      `${API_BASE}/notes/${encodeURIComponent(noteId)}/files/${encodeURIComponent(fileId)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      },
+    );
+    return handleResponse<{ fileId: string; mimeType: string; size: number }>(res);
+  },
+
+  async getFile(noteId: string, fileId: string): Promise<Blob> {
+    const res = await fetchWithOfflineCheck(
+      `${API_BASE}/notes/${encodeURIComponent(noteId)}/files/${encodeURIComponent(fileId)}`,
+    );
+    if (!res.ok) {
+      await handleResponse<never>(res);
+    }
+    return res.blob();
   },
 };
 

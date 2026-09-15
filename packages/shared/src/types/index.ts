@@ -1,3 +1,5 @@
+export type NoteType = 'markdown' | 'diagram';
+
 export interface Note {
   id: string;
   title: string;
@@ -7,6 +9,8 @@ export interface Note {
   technologies: string[];
   links: string[]; // Bidirectional links [[Note Title]]
   snippetIds: string[];
+  type?: NoteType; // Missing on legacy data means 'markdown'
+  diagramData?: string | null; // Excalidraw scene JSON for diagram notes
   createdAt: string | Date;
   updatedAt: string | Date;
   deletedAt?: string | Date | null;

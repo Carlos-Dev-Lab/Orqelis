@@ -34,7 +34,7 @@ const text = {
     heading1: 'Main heading', heading2: 'Section heading', heading3: 'Subheading', bold: 'Bold', italic: 'Italic',
     strikethrough: 'Strikethrough', list: 'Bullet list', orderedList: 'Numbered list', tasks: 'Tasks', quote: 'Quote',
     inlineCode: 'Inline code', separator: 'Separator', codeBlock: 'Code block', link: 'External link',
-    internalLink: 'Note link', image: 'Image', table: 'Table', mermaid: 'Diagram', insert: 'Insert',
+    internalLink: 'Note link', image: 'Image', table: 'Table', mermaid: 'Diagram', embedDiagram: 'Embed drawn diagram', insert: 'Insert',
     close: 'Close guide', essentials: 'Essential styles', templates: 'Useful templates',
     placeholders: {
       mainHeading: 'Main title', sectionHeading: 'Section title', subheading: 'Subheading', important: 'important text',
@@ -43,7 +43,7 @@ const text = {
       column: 'Column', detail: 'Detail', value: 'Value', description: 'Description', firstItem: 'First item',
       secondItem: 'Second item', completedTask: 'Completed task', warning: 'Write the notice here', start: 'Start', end: 'End',
     },
-    commands: { title: 'heading', list: 'list', tasks: 'tasks', quote: 'notice', code: 'code', table: 'table', note: 'note', diagram: 'diagram' },
+    commands: { title: 'heading', list: 'list', tasks: 'tasks', quote: 'notice', code: 'code', table: 'table', note: 'note', diagram: 'diagram', embed: 'embed' },
   },
   es: {
     quickFormat: 'Formato rápido', guide: 'Guía de estilos',
@@ -52,7 +52,7 @@ const text = {
     heading1: 'Título principal', heading2: 'Título de sección', heading3: 'Subtítulo', bold: 'Negrita', italic: 'Cursiva',
     strikethrough: 'Tachado', list: 'Lista con viñetas', orderedList: 'Lista numerada', tasks: 'Tareas', quote: 'Cita',
     inlineCode: 'Código corto', separator: 'Separador', codeBlock: 'Bloque de código', link: 'Enlace externo',
-    internalLink: 'Enlace a nota', image: 'Imagen', table: 'Tabla', mermaid: 'Diagrama', insert: 'Insertar',
+    internalLink: 'Enlace a nota', image: 'Imagen', table: 'Tabla', mermaid: 'Diagrama', embedDiagram: 'Incrustar diagrama dibujado', insert: 'Insertar',
     close: 'Cerrar guía', essentials: 'Estilos esenciales', templates: 'Plantillas útiles',
     placeholders: {
       mainHeading: 'Título principal', sectionHeading: 'Título de sección', subheading: 'Subtítulo', important: 'texto importante',
@@ -61,7 +61,7 @@ const text = {
       column: 'Columna', detail: 'Detalle', value: 'Valor', description: 'Descripción', firstItem: 'Primer elemento',
       secondItem: 'Segundo elemento', completedTask: 'Tarea completada', warning: 'Escribe aquí el aviso', start: 'Inicio', end: 'Fin',
     },
-    commands: { title: 'titulo', list: 'lista', tasks: 'tareas', quote: 'aviso', code: 'codigo', table: 'tabla', note: 'nota', diagram: 'diagrama' },
+    commands: { title: 'titulo', list: 'lista', tasks: 'tareas', quote: 'aviso', code: 'codigo', table: 'tabla', note: 'nota', diagram: 'diagrama', embed: 'incrustar' },
   },
 } as const;
 
@@ -158,6 +158,7 @@ export function MarkdownAssistant({ value, onChange, theme, language, noteTitles
           [c.code, `\`\`\`\${1:typescript}\n\${2:${p.codeComment}}\n\`\`\``, copy.codeBlock],
           [c.table, `| \${1:${p.column}} | \${2:${p.detail}} |\n| --- | --- |\n| \${3:${p.value}} | \${4:${p.description}} |`, copy.table],
           [c.note, `[[\${1:${p.noteTitle}}]]`, copy.internalLink],
+          [c.embed, `![[\${1:${p.noteTitle}}]]`, copy.embedDiagram],
           [c.diagram, `\`\`\`mermaid\nflowchart LR\n  A[\${1:${p.start}}] --> B[\${2:${p.end}}]\n\`\`\``, copy.mermaid],
         ];
         return {

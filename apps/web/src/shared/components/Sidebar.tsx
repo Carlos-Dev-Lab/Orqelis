@@ -18,7 +18,8 @@ import {
   Edit3,
   Trash2,
   Check,
-  Laptop
+  Laptop,
+  PenTool
 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import { useAppStore, type ViewType } from '@/shared/store';
@@ -41,6 +42,7 @@ export function Sidebar() {
     setActiveNoteId,
     setNoteModalOpen,
     openNewNote,
+    openNewDiagram,
     setCommandPaletteOpen,
     workspaces,
     activeWorkspaceId,
@@ -199,20 +201,33 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* New Note Button */}
-      <div className={cn("px-4", sidebarCollapsed ? "py-4" : "pb-4")}>
-        <button 
+      {/* New Note / New Diagram Buttons */}
+      <div className={cn("px-4 flex gap-2", sidebarCollapsed ? "py-4 flex-col" : "pb-4")}>
+        <button
           onClick={() => {
             openNewNote();
           }}
+          title={`${t('newNote', language)} (Ctrl+Alt+N)`}
           className={cn(
             "btn-glow bg-gradient-to-r from-primary to-secondary text-background font-semibold rounded-xl flex items-center justify-center gap-2 transition-all",
-            sidebarCollapsed ? "w-10 h-10" : "w-full py-3",
+            sidebarCollapsed ? "w-10 h-10" : "flex-1 py-3",
             workspaces.length === 0 && "opacity-50 grayscale cursor-not-allowed"
           )}
         >
           <Plus className="w-5 h-5" />
           {!sidebarCollapsed && <span>{t('newNote', language)}</span>}
+        </button>
+        <button
+          onClick={() => void openNewDiagram()}
+          title={`${t('newDiagram', language)} (Ctrl+Alt+D)`}
+          aria-label={t('newDiagram', language)}
+          className={cn(
+            "shrink-0 rounded-xl flex items-center justify-center border border-secondary/30 bg-secondary/10 text-secondary hover:bg-secondary/20 transition-all",
+            sidebarCollapsed ? "w-10 h-10" : "w-12",
+            workspaces.length === 0 && "opacity-50 grayscale cursor-not-allowed"
+          )}
+        >
+          <PenTool className="w-5 h-5" />
         </button>
       </div>
 

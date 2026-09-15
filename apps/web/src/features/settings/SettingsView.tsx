@@ -76,15 +76,27 @@ function SettingsView() {
 
 
 
-  const shortcuts = [
-    { keys: ['Ctrl', 'K'], description: 'Open command palette' },
-    { keys: ['Ctrl', 'Alt', 'N'], description: 'Create new note' },
-    { keys: ['Ctrl', 'S'], description: 'Save current note' },
-    { keys: ['Ctrl', 'B'], description: 'Toggle sidebar' },
-    { keys: ['Ctrl', 'P'], description: 'Toggle preview mode' },
-    { keys: ['Esc'], description: 'Close modals/palettes' },
-    { keys: ['Tab'], description: 'Autocomplete (console)' },
-    { keys: ['↑', '↓'], description: 'Navigate command history' },
+  const shortcutGroups: { title: string; items: { keys: string[]; description: string }[] }[] = [
+    {
+      title: t('shortcutGroupGeneral', language),
+      items: [
+        { keys: ['Ctrl', 'K'], description: t('shortcutCommandPalette', language) },
+        { keys: ['Ctrl', 'Alt', 'N'], description: t('shortcutNewNote', language) },
+        { keys: ['Ctrl', 'Alt', 'D'], description: t('shortcutNewDiagram', language) },
+        { keys: ['Ctrl', 'B'], description: t('shortcutToggleSidebar', language) },
+        { keys: ['Ctrl', 'Alt', '1…9'], description: t('shortcutSwitchWorkspace', language) },
+        { keys: ['Esc'], description: t('shortcutCloseModals', language) },
+      ],
+    },
+    {
+      title: t('shortcutGroupEditor', language),
+      items: [
+        { keys: ['Ctrl', 'S'], description: t('shortcutSaveNote', language) },
+        { keys: ['Ctrl', 'P'], description: t('shortcutTogglePreview', language) },
+        { keys: ['Tab'], description: t('shortcutConsoleAutocomplete', language) },
+        { keys: ['↑', '↓'], description: t('shortcutConsoleHistory', language) },
+      ],
+    },
   ];
 
   return (
@@ -178,7 +190,7 @@ function SettingsView() {
                       <div>
                         <label className="block text-sm font-medium text-on-surface-variant mb-2">{t('description', language)}</label>
                         <textarea
-                          value={activeWorkspace.description}
+                          value={activeWorkspace.description ?? ''}
                           onChange={(e) => updateWorkspace(activeWorkspace.id, { description: e.target.value })}
                           className="w-full px-4 py-2.5 rounded-lg bg-on-surface/5 border border-on-surface/10 text-on-surface focus:border-primary/50 focus:outline-none transition-colors resize-none"
                           rows={2}
@@ -400,30 +412,38 @@ function SettingsView() {
             >
               <h3 className="hidden @4xl/main:block text-xl font-bold text-on-surface mb-6">{t('keyboardShortcuts', language)}</h3>
               
-              <div className="glass-card max-w-4xl rounded-xl overflow-hidden">
-                {shortcuts.map((shortcut, index) => (
-                  <div
-                    key={index}
-                    className={cn(
-                      "flex items-center justify-between px-6 py-4",
-                      index !== shortcuts.length - 1 && "border-b border-on-surface/5"
-                    )}
-                  >
-                    <span className="text-on-surface">{shortcut.description}</span>
-                    <div className="flex items-center gap-1">
-                      {shortcut.keys.map((key, i) => (
-                        <span key={i}>
-                          <kbd className="px-2 py-1 rounded-md bg-on-surface/10 text-xs font-mono text-on-surface-variant border border-on-surface/10">
-                            {key}
-                          </kbd>
-                          {i < shortcut.keys.length - 1 && (
-                            <span className="mx-1 text-on-surface-variant/40">+</span>
+              <div className="max-w-4xl space-y-6">
+                {shortcutGroups.map((group) => (
+                  <section key={group.title}>
+                    <h4 className="mb-3 px-1 text-xs font-bold uppercase tracking-widest text-on-surface-variant">{group.title}</h4>
+                    <div className="glass-card rounded-xl overflow-hidden">
+                      {group.items.map((shortcut, index) => (
+                        <div
+                          key={shortcut.keys.join('+')}
+                          className={cn(
+                            "flex items-center justify-between gap-4 px-4 @lg:px-6 py-4",
+                            index !== group.items.length - 1 && "border-b border-on-surface/5"
                           )}
-                        </span>
+                        >
+                          <span className="text-on-surface">{shortcut.description}</span>
+                          <div className="flex shrink-0 items-center gap-1">
+                            {shortcut.keys.map((key, i) => (
+                              <span key={i}>
+                                <kbd className="px-2 py-1 rounded-md bg-on-surface/10 text-xs font-mono text-on-surface-variant border border-on-surface/10">
+                                  {key}
+                                </kbd>
+                                {i < shortcut.keys.length - 1 && (
+                                  <span className="mx-1 text-on-surface-variant/40">+</span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
                       ))}
                     </div>
-                  </div>
+                  </section>
                 ))}
+                <p className="px-1 text-sm leading-relaxed text-on-surface-variant">{t('shortcutDiagramNote', language)}</p>
               </div>
             </motion.div>
           )}

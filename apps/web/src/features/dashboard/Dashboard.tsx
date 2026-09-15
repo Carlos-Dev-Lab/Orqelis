@@ -11,7 +11,8 @@ import {
   Share2,
   Zap,
   Activity,
-  Laptop
+  Laptop,
+  PenTool
 } from 'lucide-react';
 import { cn, formatDate, getCategoryColor } from '@/shared/utils';
 import { useAppStore } from '@/shared/store';
@@ -185,8 +186,9 @@ export function Dashboard() {
                       <div className={cn("w-2 h-2 rounded-full mt-2", getCategoryColor(note.category))} />
                       {note.isFavorite && <Star className="w-4 h-4 text-amber-400 fill-amber-400" />}
                     </div>
-                    <h3 className="font-semibold text-on-surface mb-1 group-hover:text-primary transition-colors">
-                      {note.title}
+                    <h3 className="flex items-center gap-2 font-semibold text-on-surface mb-1 group-hover:text-primary transition-colors">
+                      {note.type === 'diagram' && <PenTool className="w-4 h-4 shrink-0 text-secondary" />}
+                      <span>{note.title}</span>
                     </h3>
                     <p className="text-xs text-on-surface-variant line-clamp-2 mb-3">
                       {note.content.slice(0, 100)}...

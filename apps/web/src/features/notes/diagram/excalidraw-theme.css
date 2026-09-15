@@ -1,0 +1,93 @@
+/*
+ * Orqelis look for Excalidraw.
+ * Excalidraw exposes its theme as CSS variables on `.excalidraw` / `.excalidraw.theme--dark`
+ * (https://docs.excalidraw.com/docs/@excalidraw/excalidraw/customizing-styles). We map them to the
+ * app design tokens, which already switch between light and dark with the `.dark` class and follow
+ * the user's accent color (--primary), so one block covers both themes.
+ *
+ * Note: in dark mode Excalidraw renders the canvas through an invert filter, so canvas colors
+ * (selection, element colors) are intentionally left untouched here.
+ */
+.orqelis-diagram .excalidraw,
+.orqelis-diagram .excalidraw.theme--dark {
+  --ui-font: var(--font-sans);
+
+  /* Accent */
+  --color-primary: var(--primary);
+  --color-primary-darker: color-mix(in srgb, var(--primary) 82%, var(--on-surface));
+  --color-primary-darkest: color-mix(in srgb, var(--primary) 68%, var(--on-surface));
+  --color-primary-hover: color-mix(in srgb, var(--primary) 85%, var(--on-surface));
+  --color-primary-light: color-mix(in srgb, var(--primary) 20%, var(--surface-container));
+  --color-primary-light-darker: color-mix(in srgb, var(--primary) 30%, var(--surface-container));
+  --color-primary-contrast-offset: var(--primary);
+  --color-brand-hover: var(--color-primary-hover);
+  --color-brand-active: var(--color-primary-darker);
+  --color-surface-primary-container: color-mix(in srgb, var(--primary) 18%, var(--surface-container));
+  --color-on-primary-container: var(--on-surface);
+  --color-logo-icon: var(--primary);
+  --link-color: var(--primary);
+  --focus-highlight-color: var(--primary);
+  --select-highlight-color: var(--primary);
+
+  /* Surfaces & text */
+  --default-bg-color: var(--surface-container-lowest);
+  --island-bg-color: var(--surface-container);
+  --popup-bg-color: var(--surface-container);
+  --sidebar-bg-color: var(--surface-container);
+  --color-surface-lowest: var(--surface-container-lowest);
+  --color-surface-low: var(--surface-container-low);
+  --color-surface-mid: var(--surface-container);
+  --color-surface-high: var(--surface-container-high);
+  --color-on-surface: var(--on-surface);
+  --text-primary-color: var(--on-surface);
+  --popup-text-color: var(--on-surface-variant);
+  --keybinding-color: var(--on-surface-variant);
+  --input-label-color: var(--on-surface-variant);
+  --overlay-bg-color: color-mix(in srgb, var(--background) 72%, transparent);
+
+  /* Inputs & buttons */
+  --input-bg-color: var(--surface-container-low);
+  --input-hover-bg-color: var(--surface-container-high);
+  --input-border-color: color-mix(in srgb, var(--on-surface) 12%, transparent);
+  --button-hover-bg: var(--surface-container-high);
+  --button-active-bg: var(--surface-container-highest);
+  --button-active-border: var(--primary);
+
+  /* Borders, radius & shadows (matches the app's rounded-xl glass panels) */
+  --color-border-outline: var(--outline);
+  --color-border-outline-variant: color-mix(in srgb, var(--on-surface) 12%, transparent);
+  --default-border-color: color-mix(in srgb, var(--on-surface) 10%, transparent);
+  --sidebar-border-color: color-mix(in srgb, var(--on-surface) 10%, transparent);
+  --dialog-border-color: color-mix(in srgb, var(--on-surface) 12%, transparent);
+  --border-radius-md: 0.5rem;
+  --border-radius-lg: 0.75rem;
+  --shadow-island:
+    0 0 0 1px color-mix(in srgb, var(--on-surface) 8%, transparent),
+    0 10px 30px -12px rgb(0 0 0 / 0.35);
+  --scrollbar-thumb: color-mix(in srgb, var(--on-surface) 15%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--on-surface) 25%, transparent);
+
+  /* Visible through the (transparent) canvas background */
+  background: var(--surface-container-lowest);
+}
+
+/* Readable text on accent-filled buttons (the accent is light, e.g. cyan) */
+.orqelis-diagram .excalidraw .ExcButton--color-primary.ExcButton--variant-filled,
+.orqelis-diagram .excalidraw .Card-button,
+.orqelis-diagram .excalidraw .ToolIcon__icon .orqelis-on-primary {
+  color: var(--on-primary);
+}
+
+.orqelis-diagram .excalidraw .Island {
+  border-radius: var(--border-radius-lg);
+}
+
+/* Welcome screen branding */
+.orqelis-diagram .excalidraw .welcome-screen-center__logo {
+  color: var(--on-surface);
+}
+.orqelis-diagram .excalidraw .welcome-screen-center__heading,
+.orqelis-diagram .excalidraw .welcome-screen-decor {
+  font-family: var(--font-sans);
+  color: var(--on-surface-variant);
+}

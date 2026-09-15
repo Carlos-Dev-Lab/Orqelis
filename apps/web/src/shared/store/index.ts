@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { api } from '@/shared/api';
 import { generateId } from '@/shared/utils';
-import { type Language } from '@/shared/i18n';
+import { t, type Language } from '@/shared/i18n';
 import type { 
   Note, Snippet, Workspace, Activity, Group, 
   Notification, Connection, Credential 
@@ -48,6 +48,7 @@ interface AppState {
   noteModalOpen: boolean;
   setNoteModalOpen: (open: boolean) => void;
   openNewNote: () => void;
+  openNewDiagram: (title?: string) => Promise<Note | undefined>;
   workspaceManagerOpen: boolean;
   setWorkspaceManagerOpen: (open: boolean) => void;
   groupManagerOpen: boolean;
@@ -241,6 +242,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   openNewNote: () => {
     set({ activeNoteId: null, noteModalOpen: true });
     get().setCurrentView('editor');
+  },
+  // Diagrams are created up-front so images can be uploaded against a real note id
+  openNewDiagram: async (title) => {
+    const { workspaces, language, activeGroupId } = get();
+    if (workspaces.length === 0) {
+      get().setCurrentView('editor'); // Shows the "workspace required" alert
+      return undefined;
+    }
+    const note = await get().createNote({
+      type: 'diagram',
+      title: title?.trim() || t('untitledDiagram', language),
+      content: '',
+      diagramData: JSON.stringify({ type: 'excalidraw', version: 2, elements: [], appState: {}, files: {} }),
+      groupId: activeGroupId ?? null,
+    });
+    set({ activeNoteId: note.id, noteModalOpen: true });
+    get().setCurrentView('editor');
+    return note;
   },
   workspaceManagerOpen: false,
   setWorkspaceManagerOpen: (open) => set({ workspaceManagerOpen: open }),
@@ -629,18 +648,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     
     await get().loadData();
   },
+  // Clears the local session only. To sign out use api.auth.logout(), which also ends the server session.
   logout: async () => {
+    // Anonymous visitors on the login/setup screens stay there (e.g. when the initial auth check fails)
+    const keepView = ['login', 'setup'].includes(get().currentView);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('orqelis-token');
       localStorage.removeItem('orqelis-user');
-      history.pushState({ view: 'landing' }, "", "/");
+      if (!keepView) history.pushState({ view: 'landing' }, "", "/");
     }
     
     set({ 
       token: null, 
       user: null, 
       isAuthenticated: false, 
-      currentView: 'landing', 
+      currentView: keepView ? get().currentView : 'landing',
       notes: [], snippets: [], workspaces: [], groups: [], connections: [], recentActivity: [], notifications: []
     });
   },
@@ -752,20 +774,33 @@ if (typeof window !== 'undefined') {
   // Capture shortcuts before focused editors or browser defaults can consume them.
   document.addEventListener('keydown', (e) => {
     const isMod = e.metaKey || e.ctrlKey;
+    // Ctrl+Alt shortcuts. On Windows the AltGr key (used to type @, #, | on Spanish and other
+    // layouts) reports AltGraph without ctrlKey/altKey, so excluding AltGraph keeps typing intact.
+    const isCtrlAlt = isMod && e.altKey && !e.getModifierState('AltGraph');
+    // Excalidraw uses Ctrl+K (links), Ctrl+B and Escape itself; don't hijack them inside the canvas
+    const inDiagram = e.target instanceof Element && !!e.target.closest('.excalidraw');
 
-    if (isMod && e.key.toLowerCase() === 'k') {
+    if (isMod && e.key.toLowerCase() === 'k' && !inDiagram) {
       e.preventDefault();
       useAppStore.getState().setCommandPaletteOpen(true);
       return;
     }
     
-    if (isMod && e.altKey && e.key.toLowerCase() === 'n') {
+    if (isCtrlAlt && (e.key.toLowerCase() === 'n' || e.code === 'KeyN')) {
       e.preventDefault();
       useAppStore.getState().openNewNote();
       return;
     }
 
-    if (isMod && e.key.toLowerCase() === 'b') {
+    if (isCtrlAlt && (e.key.toLowerCase() === 'd' || e.code === 'KeyD')) {
+      e.preventDefault();
+      // Excalidraw binds Ctrl+D (duplicate) without checking Alt: keep the event away from the canvas
+      e.stopPropagation();
+      void useAppStore.getState().openNewDiagram();
+      return;
+    }
+
+    if (isMod && e.key.toLowerCase() === 'b' && !inDiagram) {
       e.preventDefault();
       useAppStore.getState().toggleSidebar();
       return;
@@ -784,16 +819,21 @@ if (typeof window !== 'undefined') {
       return;
     }
 
-    if (e.ctrlKey && e.altKey && /^[1-9]$/.test(e.key)) {
+    // Ctrl+Alt+1..9 (top row or numpad): match the physical key. With layouts like Spanish, Ctrl+Alt+2
+    // arrives as key "@" (Windows treats Ctrl+Alt as AltGr), so e.key cannot be used.
+    const workspaceDigit = /^(?:Digit|Numpad)([1-9])$/.exec(e.code)?.[1];
+    if (isCtrlAlt && workspaceDigit) {
+      // Prevents the symbol from being inserted when a text field is focused
       e.preventDefault();
-      const index = parseInt(e.key) - 1;
-      const workspaces = useAppStore.getState().workspaces;
-      if (workspaces[index]) {
-        useAppStore.getState().switchWorkspace(workspaces[index].id);
+      const { workspaces, activeWorkspaceId, switchWorkspace } = useAppStore.getState();
+      const workspace = workspaces[Number(workspaceDigit) - 1];
+      if (workspace && workspace.id !== activeWorkspaceId) {
+        void switchWorkspace(workspace.id);
       }
+      return;
     }
 
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' && !inDiagram) {
       if (state.commandPaletteOpen) {
         state.setCommandPaletteOpen(false);
       } else if (state.workspaceManagerOpen) {

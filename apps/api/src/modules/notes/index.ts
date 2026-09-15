@@ -2,6 +2,8 @@
 import { Router, Request, Response } from 'express';
 import { AuthRequest, authenticate, requireWorkspace } from '../../shared/middleware/auth';
 import prisma from '../../shared/services/prisma';
+import { deleteFile } from '../../shared/services/fileStorage';
+import filesRouter from './files';
 
 const router = Router();
 
@@ -21,12 +23,62 @@ const parseNote = (note: any) => ({
   snippetIds: safeParseJson(note.snippetIds),
 });
 
+const NOTE_TYPES = ['markdown', 'diagram'];
+
+/**
+ * Normalizes an Excalidraw scene before persisting it: file binaries live on disk,
+ * so any dataURL sent by the client is dropped. Returns null for invalid JSON.
+ */
+const sanitizeDiagramData = (value: unknown): string | null => {
+  if (value === null || value === undefined || value === '') return null;
+  try {
+    const scene = typeof value === 'string' ? JSON.parse(value) : value;
+    if (!scene || typeof scene !== 'object') return null;
+    if (scene.files && typeof scene.files === 'object') {
+      for (const file of Object.values(scene.files) as any[]) {
+        if (file && typeof file === 'object') delete file.dataURL;
+      }
+    }
+    return JSON.stringify(scene);
+  } catch {
+    return null;
+  }
+};
+
+const getReferencedFileIds = (diagramData: string | null): Set<string> => {
+  const ids = new Set<string>();
+  if (!diagramData) return ids;
+  const scene = safeParseJson(diagramData, null as any);
+  for (const element of scene?.elements ?? []) {
+    if (element?.type === 'image' && !element.isDeleted && element.fileId) {
+      ids.add(element.fileId);
+    }
+  }
+  return ids;
+};
+
+/** Removes stored files (rows + disk) that the diagram no longer references. */
+const pruneUnreferencedFiles = async (noteId: string, diagramData: string | null) => {
+  const referenced = getReferencedFileIds(diagramData);
+  const files = await prisma.noteFile.findMany({ where: { noteId } });
+  const stale = files.filter((file) => !referenced.has(file.fileId));
+  for (const file of stale) {
+    await deleteFile(file.path);
+  }
+  if (stale.length > 0) {
+    await prisma.noteFile.deleteMany({ where: { id: { in: stale.map((file) => file.id) } } });
+  }
+};
+
 // ---------------------------------------------------------------------------
 // Auth middleware applied to all routes
 // ---------------------------------------------------------------------------
 
 router.use(authenticate);
 router.use(requireWorkspace);
+
+// Diagram files (images) — /api/notes/:id/files/:fileId
+router.use('/:id/files', filesRouter);
 
 // ---------------------------------------------------------------------------
 // GET / — List notes for a workspace
@@ -108,7 +160,13 @@ router.post('/', async (req: Request, res: Response) => {
       isArchived,
       workspaceId,
       groupId,
+      type,
+      diagramData,
     } = req.body;
+
+    if (type !== undefined && !NOTE_TYPES.includes(type)) {
+      return res.status(400).json({ error: 'Invalid note type' });
+    }
 
     if (!workspaceId) {
       return res.status(400).json({ error: 'workspaceId is required' });
@@ -148,6 +206,8 @@ router.post('/', async (req: Request, res: Response) => {
         isArchived: isArchived ?? false,
         workspaceId,
         groupId: groupId ?? null,
+        type: type ?? 'markdown',
+        diagramData: type === 'diagram' ? sanitizeDiagramData(diagramData) : null,
       },
     });
 
@@ -190,6 +250,7 @@ router.patch('/:id', async (req: Request, res: Response) => {
       isFavorite,
       isArchived,
       groupId,
+      diagramData,
     } = req.body;
 
     const updateData: Record<string, any> = { updatedAt: new Date() };
@@ -205,11 +266,18 @@ router.patch('/:id', async (req: Request, res: Response) => {
     if (technologies !== undefined) updateData.technologies = JSON.stringify(technologies);
     if (links !== undefined) updateData.links = JSON.stringify(links);
     if (snippetIds !== undefined) updateData.snippetIds = JSON.stringify(snippetIds);
+    if (diagramData !== undefined && note.type === 'diagram') {
+      updateData.diagramData = sanitizeDiagramData(diagramData);
+    }
 
     const updatedNote = await prisma.note.update({
       where: { id },
       data: updateData,
     });
+
+    if (updateData.diagramData !== undefined) {
+      await pruneUnreferencedFiles(id, updateData.diagramData);
+    }
 
     return res.json(parseNote(updatedNote));
   } catch (error) {

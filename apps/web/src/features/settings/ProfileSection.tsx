@@ -10,7 +10,6 @@ export function ProfileSection() {
   const { 
     user, 
     addNotification, 
-    logout, 
     showConfirm,
     language
   } = useAppStore();
@@ -46,7 +45,9 @@ export function ProfileSection() {
     showConfirm(
       language === 'es' ? '¿Cerrar Sesión?' : 'Sign Out?',
       language === 'es' ? '¿Estás seguro de que deseas cerrar sesión?' : 'Are you sure you want to sign out?',
-      () => logout(),
+      // Server-side logout revokes the session and clears the HttpOnly refresh cookie;
+      // clearing only local state would let the next reload refresh the session again
+      () => void api.auth.logout(),
       undefined,
       language === 'es' ? 'Cerrar Sesión' : 'Sign Out',
       language === 'es' ? 'Cancelar' : 'Cancel'

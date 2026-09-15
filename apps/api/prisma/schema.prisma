@@ -76,15 +76,34 @@ model Note {
   technologies String   @default("[]") // JSON string for SQLite compatibility
   links        String   @default("[]") // JSON string for SQLite compatibility
   snippetIds   String   @default("[]") // Related snippets (JSON array)
+  type         String   @default("markdown") // "markdown" | "diagram"
+  diagramData  String?  // Excalidraw scene JSON (files without dataURL) for diagram notes
   isFavorite   Boolean  @default(false)
   isArchived   Boolean  @default(false)
   workspaceId  String
   workspace    Workspace @relation(fields: [workspaceId], references: [id])
   groupId      String?
   group        Group?    @relation(fields: [groupId], references: [id])
+  files        NoteFile[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   deletedAt    DateTime?
+}
+
+// Binary files (diagram images) stored on disk; only the relative path is kept here
+model NoteFile {
+  id          String   @id @default(uuid())
+  noteId      String
+  note        Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  fileId      String   // Excalidraw file id
+  workspaceId String
+  mimeType    String
+  size        Int
+  path        String   // Relative to UPLOADS_DIR
+  createdAt   DateTime @default(now())
+
+  @@unique([noteId, fileId])
+  @@index([noteId])
 }
 
 model Snippet {

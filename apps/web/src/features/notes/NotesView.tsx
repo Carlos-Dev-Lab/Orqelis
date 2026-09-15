@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { Suspense, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Star,
@@ -9,11 +9,13 @@ import {
   Layers,
   LayoutGrid,
   List as ListIcon,
+  PenTool,
 } from 'lucide-react';
 import { cn, formatDate, getCategoryColor } from '@/shared/utils';
 import { useAppStore } from '@/shared/store';
 import { t } from '@/shared/i18n';
 import { NoteModal } from './NoteModal';
+import { DiagramPreview } from './diagram';
 import { Tooltip } from '@/shared/components/Tooltip';
 
 export function NotesView() {
@@ -26,6 +28,8 @@ export function NotesView() {
     setActiveNoteId,
     noteModalOpen,
     setNoteModalOpen,
+    openNewDiagram,
+    theme,
     language,
   } = useAppStore();
 
@@ -75,7 +79,16 @@ export function NotesView() {
 
           <div className="flex items-center gap-2 shrink-0">
             <button
+              onClick={() => void openNewDiagram()}
+              title={`${t('newDiagram', language)} (Ctrl+Alt+D)`}
+              className="px-3 @2xl:px-4 py-2.5 whitespace-nowrap bg-secondary/10 text-secondary border border-secondary/20 rounded-xl font-bold flex items-center gap-2 hover:bg-secondary/20 transition-all"
+            >
+              <PenTool className="w-5 h-5" />
+              <span className="hidden @xl:inline">{t('diagram', language)}</span>
+            </button>
+            <button
               onClick={() => handleOpenNote(null)}
+              title={`${t('newNote', language)} (Ctrl+Alt+N)`}
               className="px-4 @2xl:px-6 py-2.5 whitespace-nowrap bg-primary text-on-primary rounded-xl font-bold flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-primary/20"
             >
               <Plus className="w-5 h-5" />
@@ -163,11 +176,23 @@ export function NotesView() {
                     className={cn("absolute top-0 left-0 w-1 h-full opacity-40 group-hover:opacity-100 transition-opacity", getCategoryColor(note.category))} 
                   />
 
+                  {note.type === 'diagram' && viewMode === 'grid' && (
+                    <Suspense fallback={<div className="h-32 mb-4" />}>
+                      <DiagramPreview
+                        note={note}
+                        theme={theme}
+                        frozen={noteModalOpen}
+                        className="h-32 mb-4 -mx-2 rounded-2xl bg-on-surface/[0.03] border border-on-surface/5"
+                      />
+                    </Suspense>
+                  )}
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <Tooltip content={note.title}>
-                        <h3 className="font-bold text-on-surface truncate group-hover:text-primary transition-colors">
-                          {note.title}
+                        <h3 className="flex items-center gap-2 min-w-0 font-bold text-on-surface group-hover:text-primary transition-colors">
+                          {note.type === 'diagram' && <PenTool className="w-4 h-4 shrink-0 text-secondary" />}
+                          <span className="truncate">{note.title}</span>
                         </h3>
                       </Tooltip>
                       {note.isFavorite && (

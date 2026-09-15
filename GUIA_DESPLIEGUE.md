@@ -30,6 +30,7 @@ El proyecto utiliza variables de entorno para configurar la seguridad y la base 
     -   `REFRESH_TOKEN_SECRET`: Otra cadena larga y aleatoria.
     -   `CREDENTIAL_ENCRYPTION_KEY`: Una clave de 32 caracteres (para encriptar contraseñas de bases de datos externas).
     -   `SETUP_TOKEN`: Un token que elegirás tú (ej: `mi-token-secreto-123`). Lo necesitarás al entrar por primera vez a la web.
+    -   `UPLOADS_DIR` *(opcional)*: Carpeta para las imágenes de los diagramas. Si no se define, en local se usa `apps/api/uploads`.
 
 > **Importante**: No compartas este archivo `.env` ni lo subas al control de versiones.
 
@@ -67,6 +68,8 @@ pnpm dev
 -   **Frontend**: Accede a `http://localhost:3000`
 -   **Backend**: Accede a `http://localhost:3001`
 
+> **Actualizaciones de esquema**: si ya tenías una base de datos local, ejecuta `pnpm prisma:migrate` tras actualizar el proyecto para aplicar las migraciones nuevas (por ejemplo `diagram_notes`, que añade las notas de tipo diagrama y la tabla `NoteFile`). Las imágenes de los diagramas se guardarán en `apps/api/uploads/`, que está ignorada por git.
+
 ---
 
 ## 🐳 3. Despliegue con Docker (Recomendado para Producción)
@@ -85,7 +88,16 @@ docker-compose up -d --build
 -   **-d**: Ejecuta en segundo plano (detached mode).
 -   **--build**: Asegura que se construyan las imágenes con los últimos cambios.
 
-### Paso 3.3: Acceso y Configuración Inicial (Wizard)
+### Paso 3.3: Datos Persistentes (Base de Datos e Imágenes)
+El servicio `backend` monta el volumen `orqelis-db-data` en `/app/data`, donde viven:
+-   `/app/data/dev.db`: la base de datos SQLite.
+-   `/app/data/uploads/`: las imágenes de los diagramas (`UPLOADS_DIR=/app/data/uploads`, ya definido en `docker-compose.yml`).
+
+Al arrancar, el backend ejecuta `prisma db push`, así que los cambios de esquema (como la tabla `NoteFile`) se aplican solos al reconstruir.
+
+> **Copias de seguridad**: guarda el volumen completo (base de datos **y** `uploads`). La exportación JSON desde la aplicación incluye las notas y la escena de los diagramas, pero **no** los archivos de imagen.
+
+### Paso 3.4: Acceso y Configuración Inicial (Wizard)
 1.  Abre tu navegador en `http://localhost:3000`.
 2.  Serás redirigido al **Wizard de Configuración**.
 3.  Introduce el `SETUP_TOKEN` que definiste en tu archivo `.env`.
@@ -101,11 +113,13 @@ docker-compose up -d --build
 -   **Verificar API**: Accede a `http://localhost:3001/health`. Debería devolver `{"status":"ok"}`.
 -   **Error de Variables**: Si el backend no arranca y muestra errores de "Missing required variable", asegúrate de haber generado o configurado todos los secretos en el archivo `.env`. En producción, el sistema no arrancará sin estos valores por seguridad.
 -   **Error de permisos**: Si el contenedor de backend falla al escribir la base de datos, asegúrate de que el directorio `./data` (creado por docker) tenga permisos de escritura.
+-   **Imágenes de diagramas que no cargan**: comprueba que `UPLOADS_DIR` apunte a una carpeta con permisos de escritura dentro del volumen (`/app/data/uploads`) y revisa los logs del backend (`docker-compose logs backend`).
 
 ### En Local:
 -   **Puertos ocupados**: Asegúrate de que los puertos `3000` y `3001` estén libres.
 -   **Error de Shared Package**: Si ves errores de importación de `@orqelis/shared`, asegúrate de haber ejecutado `pnpm build:shared`.
 -   **Prisma Client**: Si recibes errores de Prisma, ejecuta `pnpm prisma:generate`.
+-   **Fuentes de los diagramas**: Vite sirve las fuentes de Excalidraw desde `/fonts` en desarrollo y las copia a `dist/fonts` al compilar, por lo que no se necesita acceso a CDNs externos.
 
 ---
 

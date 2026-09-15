@@ -76,6 +76,25 @@ flowchart LR
 ```
 ````
 
+### Diagramas Dibujados (Excalidraw)
+Además de Mermaid, puedes crear **notas de tipo diagrama** para dibujar arquitecturas, flujos o bocetos a mano alzada:
+
+- Créalos con `Ctrl + Alt + D`, con el icono de lápiz junto a *Nueva nota* o con el comando de consola `new-diagram <título>`.
+- Escribe `[[Título de nota]]` en cualquier texto del lienzo (o como enlace de un elemento con `Ctrl + K`) para conectarlo con otras notas.
+- Las imágenes pegadas se guardan en el servidor, no dentro de la nota.
+
+Úsalos desde una nota markdown así:
+
+```markdown
+El flujo completo está en [[Arquitectura del sistema]].   <!-- vínculo con vista previa -->
+
+![[Arquitectura del sistema]]                              <!-- diagrama incrustado -->
+```
+
+- Un **vínculo** `[[...]]` a un diagrama muestra su vista previa al pasar el ratón y lo añade a la sección *Diagramas vinculados* al final de la nota.
+- Una **incrustación** `![[...]]` lo dibuja dentro de la nota. En el editor, escribe `/incrustar` para insertarla.
+- Los vínculos van **por título**: usa títulos claros y únicos, y actualiza los `[[...]]` si renombras un diagrama.
+
 ### Listas y Tareas
 Ideal para checklists de despliegue o seguimiento de features.
 - [x] Implementar autenticación JWT.
@@ -138,7 +157,8 @@ Utilizamos emojis específicos para denotar estados o tipos de contenido:
 
 ## 🏁 Notas Finales
 - Usa la barra de **Formato rápido** para aplicar estilos al texto seleccionado.
-- Escribe `/` para insertar plantillas y `[[` para autocompletar el título de otra nota.
+- Escribe `/` para insertar plantillas y `[[` para autocompletar el título de otra nota o diagrama.
+- Usa `Ctrl + Alt + N` para una nota nueva y `Ctrl + Alt + D` para un diagrama nuevo.
 - Pulsa `Escape` para cerrar la guía de estilos y volver al editor.
 - Mantén la consistencia con el resto de la documentación.
 - No abuses de los emojis; úsalos para guiar la vista.

@@ -74,3 +74,6 @@ __v0_devtools.tsx
 __v0_jsx-dev-runtime.ts
 .snowflake/
 .v0-trash/
+
+# Uploaded note files (diagram images)
+apps/api/uploads/

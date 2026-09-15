@@ -61,7 +61,7 @@ const noteSchema = z.preprocess((val: any) => {
     if (!val.title && val.name) val.title = val.name;
     if (!val.content && val.body) val.content = val.body;
     if (!val.content && val.text) val.content = val.text;
-    if (!val.category && val.type) val.category = val.type;
+    if (!val.category && val.type && !['markdown', 'diagram'].includes(val.type)) val.category = val.type;
   }
   return val;
 }, z.object({
@@ -73,6 +73,8 @@ const noteSchema = z.preprocess((val: any) => {
   technologies: z.any().optional(),
   links: z.any().optional(),
   snippetIds: z.any().optional(),
+  type: z.enum(['markdown', 'diagram']).nullish().transform(v => v || 'markdown'),
+  diagramData: z.any().optional(),
   isFavorite: z.boolean().nullish().transform(v => v || false),
   isArchived: z.boolean().nullish().transform(v => v || false),
   workspaceId: z.string().min(1),
@@ -380,6 +382,10 @@ router.post('/', async (req: Request, res: Response) => {
             technologies: typeof note.technologies === 'string' ? note.technologies : JSON.stringify(note.technologies || []),
             links: typeof note.links === 'string' ? note.links : JSON.stringify(note.links || []),
             snippetIds: translateIds(note.snippetIds),
+            type: note.type,
+            diagramData: note.type === 'diagram' && note.diagramData
+              ? (typeof note.diagramData === 'string' ? note.diagramData : JSON.stringify(note.diagramData))
+              : null,
             isFavorite: note.isFavorite,
             isArchived: note.isArchived,
             workspaceId: newWsId,
